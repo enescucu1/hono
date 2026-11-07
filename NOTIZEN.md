@@ -11,7 +11,7 @@ Sai macht als Nächstes die **Integrationstests mit Vitest** für die REST-Schni
 
 ### Vorher prüfen
 
-- [ ] Pull Request #5 (POST, PUT, DELETE, ETag) ist in `main` gemergt. Enes löst gerade Konflikte in drei Dateien, indem er die Fassung seines Branches nimmt.
+- [x] Pull Request #4 (POST) und #5 (PUT, DELETE, ETag) sind in `main` gemergt (7.11., die Konflikte in drei Dateien waren gelöst)
 - [ ] Nach `git checkout main` und `git pull` enthält `src/rezept/rest/rezept-write.router.mts` die Routen `PUT` und `DELETE` (zum Beispiel mit `Select-String "put|delete" src\rezept\rest\rezept-write.router.mts`)
 - [ ] Projekt eingerichtet (Abschnitt "Projekt einrichten") und `pnpm run dev` läuft, `http://localhost:3000/rest/20` liefert das Rezept "Pfannkuchen"
 
@@ -121,7 +121,8 @@ Pfad wie bei Enes `C:\workspace\javascript\...` (nicht in einem Pfad mit Leerzei
 | #1 | Rezept-Datenbank (SQL, CSV, ER-Diagramm), Drizzle-Schema und Relations, Beispiele, Lint und Notizen |
 | #2 | Hono-Gerüst: `src/config`, `src/rezept/service`, `src/rezept/rest`, `src/server.mts`, `GET /rest/:id` |
 | #3 | Suche `GET /rest` mit Query-Parametern und Zod |
-| #5 | `POST`, `PUT`, `DELETE` und ETag mit Zod. **Offen**, Konflikte werden von Enes gelöst, danach mergen |
+| #4 | `POST /rest` mit Zod, Anlegen von Rezept, Titel und Zutaten in einer Transaktion |
+| #5 | `PUT`, `DELETE` und ETag (If-Match, If-None-Match), dazu die Übergabe-Notizen |
 
 ### REST-Schnittstelle
 
@@ -245,9 +246,9 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 
 ### Aktuell (Enes)
 
-- [ ] Pull Request #5 mergen (Konflikte lösen: `git merge origin/main`, bei den drei Dateien die Fassung des Branches nehmen, `lint`, `tsc`, pushen)
+- [x] Pull Request #4 und #5 gemergt
 - [ ] Bruno-Collection im Repository ablegen: `extras/bruno/javascript` (die `.gitignore` schließt dort `environments` und Bilder aus, Secrets bleiben draußen)
-- [ ] Mail an Herrn Zimmermann mit Repo, Beispiel und zwei Fragen (Hono-Version, Zertifikat und Schlüssel für HTTPS). Entwurf liegt vor
+- [ ] Mail an Herrn Zimmermann mit Repo, Beispiel
 
 ### Als Nächstes (Sai)
 
