@@ -19,17 +19,17 @@ import { defineRelations } from 'drizzle-orm';
 export const relations = defineRelations({ rezeptTable, titelTable, zutatTable }, (rel) => {
     return {
         titelTable: {
-            rezeptTable: rel.one.rezeptTable({
+            rezept: rel.one.rezeptTable({
                 from: rel.titelTable.rezeptId,
                 to: rel.rezeptTable.id,
             }),
         },
         rezeptTable: {
-            titelTable: rel.one.titelTable(),
-            zutatTable: rel.many.zutatTable(),
+            titel: rel.one.titelTable(),
+            zutaten: rel.many.zutatTable(),
         },
         zutatTable: {
-            rezeptTable: rel.one.rezeptTable({
+            rezept: rel.one.rezeptTable({
                 from: rel.zutatTable.rezeptId,
                 to: rel.rezeptTable.id,
             }),

@@ -102,7 +102,7 @@ try {
     // https://orm.drizzle.team/docs/rqb-v2
     const rezeptMitRelationen = await db.query.rezeptTable.findFirst({
         where: { id: 20 },
-        with: { titelTable: true, zutatTable: true },
+        with: { titel: true, zutaten: true },
     });
     message = styleText(['black', 'bgWhite'], 'rezeptMitRelationen');
     console.log(`${message}: %j`, rezeptMitRelationen);

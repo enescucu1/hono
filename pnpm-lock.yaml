@@ -166,12 +166,18 @@ importers:
 
   .:
     dependencies:
+      '@hono/node-server':
+        specifier: 2.1.6
+        version: 2.1.6(hono@5.0.0-rc.0)
       dotenv:
         specifier: 18.0.9
         version: 18.0.9
       drizzle-orm:
         specifier: 1.0.0-rc.5
         version: 1.0.0-rc.5(@types/pg@8.23.1)(bun-types@1.4.4)(pg@8.23.1)
+      hono:
+        specifier: 5.0.0-rc.0
+        version: 5.0.0-rc.0
       pg:
         specifier: 8.23.1
         version: 8.23.1
@@ -421,6 +427,12 @@ packages:
   '@eslint/plugin-kit@0.7.3':
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
+  '@hono/node-server@2.1.6':
+    resolution: {integrity: sha512-p/KH9MnfNcsm3sR6x4lNgm5j+QN4Et8srKredl9DZfXiyZ1UQ3aQ2YVpFLbqktYN5JI+DB+VZFKM2PqE5hLKjQ==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      hono: ^4 || ^5.0.0-0
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -1250,6 +1262,10 @@ packages:
     resolution: {integrity: sha512-iZyKG96/JwPz1N55vj2Ie2vXbhu440zfUfJvSwEqEbeLluk7NnapfGqa7LH0mOsnDxTF85Mx8/dyR6HfqcbmbQ==}
     engines: {node: '>=20'}
 
+  hono@5.0.0-rc.0:
+    resolution: {integrity: sha512-OqP0HN4iTIgGcDMygEuNtTTZQJWppHLtxCNm5BbSGzFUrCh0LRx6FXsZaMCaf9iFC6RhjpJg952wclOpsgJv6w==}
+    engines: {node: '>=22.12.0'}
+
   hookified@1.15.1:
     resolution: {integrity: sha512-MvG/clsADq1GPM2KGo2nyfaWVyn9naPiXrqIe4jYjXNZQt238kWyOGrsyc/DmRAQ+Re6yeo6yX/yoNCG5KAEVg==}
 
@@ -1603,6 +1619,10 @@ snapshots:
     dependencies:
       '@eslint/core': 1.2.1
       levn: 0.4.1
+
+  '@hono/node-server@2.1.6(hono@5.0.0-rc.0)':
+    dependencies:
+      hono: 5.0.0-rc.0
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -2082,6 +2102,8 @@ snapshots:
   hashery@1.5.1:
     dependencies:
       hookified: 1.15.1
+
+  hono@5.0.0-rc.0: {}
 
   hookified@1.15.1: {}
 

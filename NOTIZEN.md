@@ -79,6 +79,8 @@ Letzter Stand: 7.11.2026
 - Das Script `pnpm run drizzle-kit-pull` gibt es nicht, der Befehl lautet `pnpm exec drizzle-kit pull`
 - Oxlint meldet `sort-imports`: erst Imports mit mehreren Namen, dann mit einem Namen, innerhalb jeder Gruppe nach dem ersten Namen sortiert (Großbuchstaben vor Kleinbuchstaben)
 - Oxlint meldet `TS2591` (`node:process` nicht gefunden) in `drizzle.config.ts`, weil die Datei nicht im `include` der `tsconfig.json` steht und `pnpm run tsc` sie deshalb nie prüft. Lösung: `"drizzle.config.ts"` in `include` aufnehmen
+- Oxlint verbietet `process.env` (`node/no-process-env`), deshalb steht die Konfiguration als Konstanten in `src/config/*.mts` (wie bei den Beispielen mit Passwort `p` für die lokale Entwicklungs-DB)
+- Die Namen der Relationen in `relations.mts` erscheinen im JSON der REST-Schnittstelle. Deshalb heißen sie `titel` und `zutaten` (statt `titelTable` und `zutatTable`), bei `titelTable` und `zutatTable` auf der Gegenseite `rezept`
 - `drizzle-kit pull` erzeugt unbrauchbare Namen (`rezeptInRezept`, `titelInRezepts`). In `relations.mts` heißt der Parameter `rel` statt `r`, weil die Oxlint-Regel `id-length` einstellige Namen verbietet (Ausnahmen nur `c`, `i`, `T`, `_`)
 - Die `.env` ist nicht im Repository. Jeder legt seine eigene an, mit eigenem Keycloak-Secret
 - Docker Desktop muss laufen, sonst meldet `docker` einen Fehler zur Verbindung mit der Docker-API
@@ -104,19 +106,34 @@ Letzter Stand: 7.11.2026
 
 ### Als Nächstes (Drizzle-Schema für Rezept)
 
-- [ ] Stand sichern: committen und `feature/rezept-db` pushen
+- [x] Stand gesichert: Commits auf `feature/rezept-db` gepusht (DB-Dateien, Schema und Beispiele, Notizen, Buch-Beispiel entfernt)
 - [x] `.env` (lokal, nicht im Repo) und `drizzle.config.ts` auf `rezept` umgestellt (`DATABASE_URL`, `DATABASE_URL_ADMIN`, `schemaFilter`)
 - [x] `pnpm exec drizzle-kit pull`: 3 Tabellen, 22 Spalten, 1 Enum, 6 Indizes, 2 Foreign Keys, 3 Check-Constraints. Der Ordner `drizzle` ist in der `.gitignore`
 - [x] `schema.mts` und `relations.mts` nach `src/db` übernommen: `rezeptSchema`, `rezeptTable`, `titelTable`, `zutatTable`, `numeric` mit `mode: 'number'`, `jsonb().$type<string[]>()`, `.defaultNow()`, Named Imports mit `.mts`
-- [x] `beispiele.mts` und `beispiele-write.mts` auf Rezept umgestellt, relationale Abfrage mit `db.query` ergänzt. Verzeichnis `init/buch` aus dem Repo entfernen (`git rm -r`)
+- [x] `beispiele.mts` und `beispiele-write.mts` auf Rezept umgestellt, relationale Abfrage mit `db.query` ergänzt. Verzeichnis `init/buch` per `git rm -r` aus dem Repo entfernt
 - [x] `pnpm exec oxfmt`, `pnpm run lint` (0 Fehler) und `pnpm run tsc` (ohne Fehler)
 - [x] Beide Beispiele laufen gegen die Rezept-DB: `kosten` und `menge` kommen als `number`, die relationale Abfrage (`db.query`) liefert Rezept 20 mit Titel (`untertitel: null`) und drei Zutaten in **einer** SQL-Abfrage. `beispiele-write.mts` hat Rezept 1000 angelegt, Rezept 30 auf Version 1 geändert und Rezept 70 gelöscht (nicht nochmal ausführen)
-- [ ] Pull Request, Sai prüft
+- [x] Pull Request #1 gemergt (`main` auf `868b5c0`). Sai hat ihn noch nicht geprüft, nachträglicher Review offen
+- [x] Branch `feature/rezept-db` gelöscht (GitHub und lokal)
+
+### Als Nächstes (Hono: erste REST-Route)
+
+- [ ] Branch `feature/hono-rest` von `main`
+- [ ] Im Forum bestätigen lassen: Hono 5.0.0-rc.0 (steht in `minimumReleaseAgeExclude` der `pnpm-workspace.yaml`) oder `latest` 4.13.17
+- [ ] `pnpm add hono@5.0.0-rc.0 @hono/node-server@2.1.6`
+- [x] `pnpm add hono@5.0.0-rc.0 @hono/node-server@2.1.6` lief, `pnpm run dev` startet den Server, `GET /rest/20` liefert Rezept mit Titel und drei Zutaten
+- [ ] Relationen umbenennen (`titel`, `zutaten`, `rezept`) in `relations.mts`, im Service und in `beispiele.mts`
+- [ ] Gerüst einspielen: `src/config/db.mts`, `src/config/server.mts`, `src/rezept/service/rezept-read.service.mts`, `src/rezept/rest/rezept-get.router.mts`, `src/server.mts`
+- [ ] `package.json`: Scripts `start` und `dev` (`node --env-file=.env ... src/server.mts`)
+- [ ] `pnpm exec oxfmt`, `pnpm run lint`, `pnpm run tsc`
+- [ ] Server starten, `GET http://localhost:3000/rest/20` im Browser oder in Bruno testen (200 mit Titel und Zutaten, 404 bei unbekannter oder ungültiger ID)
+- [ ] Commit, Pull Request, Sai prüft (diesmal auf die Freigabe warten)
 
 ### Danach
 
 - [ ] Regeln in `oxlint.config.mts` ergänzen: `no-var`, `prefer-const`, `@stylistic/quotes` (single), `prefer-destructuring`. Mit `pnpm exec oxlint --rules` prüfen, ob es eine Regel gegen Enums gibt
-- [ ] Hono: REST-Schnittstelle, Validierung mit Zod, GraphQL Yoga
+- [ ] Hono: weitere REST-Routen (POST, PUT, DELETE, Suche), Validierung mit Zod, ETag und Versionsprüfung, GraphQL Yoga
+- [ ] TLS für den Appserver: `.gitignore` nennt `src/config/tls/key.pem`, Zertifikat und Schlüssel fehlen noch (Dozent oder ILIAS fragen). Bis dahin läuft der Server mit HTTP
 - [ ] OIDC und OAuth 2 mit Keycloak
 - [ ] Vitest mit Fetch API für Integrationstests
 - [ ] Oxlint und Oxfmt im Projekt laufen lassen und Meldungen beheben
