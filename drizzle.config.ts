@@ -29,7 +29,7 @@ export default defineConfig({
     dbCredentials: {
         url: DATABASE_URL,
     },
-    schemaFilter: ['buch'],
+    schemaFilter: ['rezept'],
     out: './drizzle',
     schema: 'src/db/schema.mts',
 });

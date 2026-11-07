@@ -15,10 +15,10 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 // Aufruf:  pnpm i
-//          node --env-file=.env src\beispiele.mts
+//          node --env-file=.env src\beispiele-write.mts
 
-import { abbildungTable, buchTable, titelTable } from './db/schema.mts';
 import { eq, sql } from 'drizzle-orm';
+import { rezeptTable, titelTable, zutatTable } from './db/schema.mts';
 import { type PgUpdateSetSource } from 'drizzle-orm/pg-core';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { readFile } from 'node:fs/promises';
@@ -27,60 +27,66 @@ import { styleText } from 'node:util';
 let message: string;
 
 // https://orm.drizzle.team/docs/insert
-type BuchInsert = typeof buchTable.$inferInsert;
-const neuesBuch: BuchInsert = {
+type RezeptInsert = typeof rezeptTable.$inferInsert;
+const neuesRezept: RezeptInsert = {
     // Spaltentyp "text"
-    isbn: '978-0-007-00644-1',
+    rezeptnummer: 'RZ-100',
     // Spaltentyp "integer"
-    rating: 1,
-    // Spaltentyp "enum('HARDCOVER', ...)"
-    art: 'HARDCOVER',
-    // number -> Spaltentyp "numeric"
-    preis: '99.99',
-    rabatt: '0.0123',
+    bewertung: 1,
+    // Spaltentyp "enum('EINFACH', ...)"
+    schwierigkeit: 'EINFACH',
+    // number -> Spaltentyp "numeric" mit mode "number"
+    kosten: 99.99,
+    zubereitungszeit: 45,
     // Spaltentyp "boolean"
-    lieferbar: true,
+    vegetarisch: true,
     // Datum im Format ISO8601 fuer Spaltentyp "date"
     datum: '2026-02-28T00:00:00Z',
-    homepage: 'https://beispiele.drizzle',
+    quelle: 'https://beispiele.drizzle',
     // Spaltentyp "jsonb"
-    schlagwoerter: ['JAVASCRIPT', 'TYPESCRIPT'],
+    schlagwoerter: ['BEISPIEL', 'TYPESCRIPT'],
 };
 
 // ohne Fremdschluessel-Spalte
-type TitelInsert = Omit<typeof titelTable.$inferInsert, 'buchId'>;
+type TitelInsert = Omit<typeof titelTable.$inferInsert, 'rezeptId'>;
 const neuerTitel: TitelInsert = {
     titel: 'Beispiel',
     untertitel: 'beispiel',
 };
 
 // ohne Fremdschluessel-Spalte
-type AbbildungInsert = Omit<typeof abbildungTable.$inferInsert, 'buchId'>;
-const neueAbbildungen: AbbildungInsert[] = [
+type ZutatInsert = Omit<typeof zutatTable.$inferInsert, 'rezeptId'>;
+const neueZutaten: ZutatInsert[] = [
     {
-        beschriftung: 'Abb. 1',
-        contentType: 'img/png',
+        bezeichnung: 'Reis',
+        menge: 200,
+        einheit: 'g',
+    },
+    {
+        bezeichnung: 'Paprika',
+        menge: 1.5,
+        einheit: 'Stueck',
     },
 ];
 
-type BuchUpdate = PgUpdateSetSource<typeof buchTable>;
-const geaendertesBuch: BuchUpdate = {
+type RezeptUpdate = PgUpdateSetSource<typeof rezeptTable>;
+const geaendertesRezept: RezeptUpdate = {
     version: 1,
-    rating: 5,
-    art: 'HARDCOVER',
-    preis: '3333',
-    rabatt: '0.033',
-    lieferbar: true,
+    bewertung: 5,
+    schwierigkeit: 'MITTEL',
+    kosten: 33.33,
+    zubereitungszeit: 35,
+    vegetarisch: true,
     datum: '2026-03-03T00:00:00Z',
-    homepage: 'https://geaendert.put.rest',
-    schlagwoerter: ['JAVA'],
+    quelle: 'https://geaendert.put.rest',
+    schlagwoerter: ['SUPPE'],
 };
 
-// Drizzle-Client mit DB-User "buch"
+// Drizzle-Client mit DB-User "rezept"
 const db = drizzle({
     connection: {
-        user: 'buch',
-        database: 'buch',
+        user: 'rezept',
+        database: 'rezept',
         password: 'p',
         host: 'localhost',
         ssl: {
@@ -97,67 +103,67 @@ const db = drizzle({
     logger: true,
 });
 
-// Operationen mit "buchTable" aus "db/schema.mts"
+// Operationen mit "rezeptTable" aus "db/schema.mts"
 try {
     // COMMIT, wenn der Callback bzw. Arrow-Function erfolgreich ist
     // ROLLBACK, wenn ein Error geworfen wird
     await db.transaction(async (tx) => {
         // https://orm.drizzle.team/docs/insert
-        const [buchInsert] = await tx.insert(buchTable).values(neuesBuch).returning();
-        if (buchInsert === undefined) {
-            throw new Error('Das Buch wurde nicht eingefuegt.');
+        const [rezeptInsert] = await tx.insert(rezeptTable).values(neuesRezept).returning();
+        if (rezeptInsert === undefined) {
+            throw new Error('Das Rezept wurde nicht eingefuegt.');
         }
-        const buchId = buchInsert.id;
+        const rezeptId = rezeptInsert.id;
 
         // Spread Operator
         const [titelInsert] = await tx
             .insert(titelTable)
-            .values({ ...neuerTitel, buchId })
+            .values({ ...neuerTitel, rezeptId })
             .returning();
         if (titelInsert === undefined) {
             throw new Error('Der Titel wurde nicht eingefuegt.');
         }
 
-        const abbildungenInsert = await Promise.all(
-            neueAbbildungen.map(async (abbildung) => {
-                const [abbildungInsert] = await tx
-                    .insert(abbildungTable)
-                    .values({ ...abbildung, buchId })
-                    .returning({ id: abbildungTable.id });
-                if (abbildungInsert === undefined) {
-                    throw new Error('Die Abbildung wurde nicht eingefuegt.');
+        const zutatenInsert = await Promise.all(
+            neueZutaten.map(async (zutat) => {
+                const [zutatInsert] = await tx
+                    .insert(zutatTable)
+                    .values({ ...zutat, rezeptId })
+                    .returning({ id: zutatTable.id });
+                if (zutatInsert === undefined) {
+                    throw new Error('Die Zutat wurde nicht eingefuegt.');
                 }
-                return abbildungInsert;
+                return zutatInsert;
             }),
         );
 
         message = styleText(['black', 'bgWhite'], 'Generierte IDs');
         console.log(`${message}: %j`, {
-            buch: [buchInsert.id, buchInsert.erzeugt],
+            rezept: [rezeptInsert.id, rezeptInsert.erzeugt],
             titel: titelInsert.id,
-            abbildungen: abbildungenInsert.map((abb) => abb.id),
+            zutaten: zutatenInsert.map((zutat) => zutat.id),
         });
 
         // https://orm.drizzle.team/docs/update
-        const [buchUpdate] = await tx
-            .update(buchTable)
+        const [rezeptUpdate] = await tx
+            .update(rezeptTable)
             .set({
                 // Spread-Operator
-                ...geaendertesBuch,
+                ...geaendertesRezept,
                 // Funktion "now" von SQL durch den Template-String aufrufen
                 aktualisiert: sql`now()`,
             })
-            .where(eq(buchTable.id, 30))
+            .where(eq(rezeptTable.id, 30))
             .returning();
 
         message = styleText(['black', 'bgWhite'], 'Neue Version');
-        console.log(`${message}: %s, %s`, buchUpdate?.version, buchUpdate?.aktualisiert);
+        console.log(`${message}: %s, %s`, rezeptUpdate?.version, rezeptUpdate?.aktualisiert);
 
         // https://orm.drizzle.team/docs/delete
         // "CREATE TABLE" mit "ON DELETE CASCADE"
-        const buchDelete = await tx.delete(buchTable).where(eq(buchTable.id, 70)).returning();
+        const rezeptDelete = await tx.delete(rezeptTable).where(eq(rezeptTable.id, 70)).returning();
         message = styleText(['black', 'bgWhite'], 'Anzahl DELETE');
-        console.log(`${message}: `, buchDelete.length);
+        console.log(`${message}: `, rezeptDelete.length);
     });
 } finally {
     await db.$client.end();

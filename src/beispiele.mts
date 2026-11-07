@@ -15,28 +15,22 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 // Aufruf:  pnpm i
-//
 //          node --env-file=.env src\beispiele.mts
-//          bun --env-file=.env src\beispiele.mts
 
-import { abbildungTable, buchTable, titelTable } from './db/schema.mts';
 import { eq, ilike } from 'drizzle-orm';
+import { rezeptTable, titelTable, zutatTable } from './db/schema.mts';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { readFile } from 'node:fs/promises';
+import { relations } from './db/relations.mts';
 import { styleText } from 'node:util';
 
 let message: string;
 
-// Drizzle-Client mit DB-User "buch"
-// Default-Werte fuer Connection Pool:
-//  Maximum connections: 10
-//  Minimum connections: 0
-//  Idle timeout: 10 Sekunden
-//  Connection timeout: unbegrenzt
+// Drizzle-Client mit DB-User "rezept"
 const db = drizzle({
     connection: {
-        user: 'buch',
-        database: 'buch',
+        user: 'rezept',
+        database: 'rezept',
         password: 'p',
         host: 'localhost',
         ssl: {
@@ -50,82 +44,91 @@ const db = drizzle({
         idleTimeoutMillis: 30_000, // Timeout, wie lange eine Verbindung inaktive ist, bevor sie geschlossen wird
         connectionTimeoutMillis: 5_000, // Timeout fuer Aufbau der DB-Verbindung
     },
+    // fuer die relationalen Abfragen mit "db.query"
+    relations,
     logger: true,
 });
 
-type BuchSelect = typeof buchTable.$inferSelect;
+type RezeptSelect = typeof rezeptTable.$inferSelect;
 type TitelSelect = typeof titelTable.$inferSelect;
-type AbbildungSelect = typeof abbildungTable.$inferSelect;
+type ZutatSelect = typeof zutatTable.$inferSelect;
 
-// Operationen mit "buchTable" aus "db/schema.mts"
-// Zum Lesen ist keine Transaktion notwendig
 try {
     // https://orm.drizzle.team/docs/select
     // https://orm.drizzle.team/docs/operators
-    // falls kein Datensatz gefunden wurde, ist das JSON-Array leer und buch ist dann undefined
+    // falls kein Datensatz gefunden wurde, ist das JSON-Array leer und rezept ist dann undefined
     // Array Destructuring
-    const [buch]: BuchSelect[] = await db
+    const [rezept]: RezeptSelect[] = await db
         .select()
-        .from(buchTable)
-        .where(eq(buchTable.id, 1))
+        .from(rezeptTable)
+        .where(eq(rezeptTable.id, 1))
         .limit(1);
-    message = styleText(['black', 'bgWhite'], 'buch');
-    console.log(`${message}: %j`, buch);
+    message = styleText(['black', 'bgWhite'], 'rezept');
+    console.log(`${message}: %j`, rezept);
     console.log();
 
     // Pagination: Seite 1, max 2 Eintraege pro Seite
-    const buecherPage1: BuchSelect[] = await db.select().from(buchTable).limit(2).offset(0);
-    message = styleText(['black', 'bgWhite'], 'buecherPage1');
-    console.log(`${message}: %j`, buecherPage1);
+    const rezepteSeite1: RezeptSelect[] = await db.select().from(rezeptTable).limit(2).offset(0);
+    message = styleText(['black', 'bgWhite'], 'rezepteSeite1');
+    console.log(`${message}: %j`, rezepteSeite1);
     console.log();
 
     // Pagination: Seite 3, max 2 Eintraege pro Seite
-    const buecherPage2: BuchSelect[] = await db.select().from(buchTable).limit(2).offset(4);
-    message = styleText(['black', 'bgWhite'], 'buecherPage2');
-    console.log(`${message}: %j`, buecherPage2);
+    const rezepteSeite3: RezeptSelect[] = await db.select().from(rezeptTable).limit(2).offset(4);
+    message = styleText(['black', 'bgWhite'], 'rezepteSeite3');
+    console.log(`${message}: %j`, rezepteSeite3);
     console.log();
 
     // SELECT     *
-    // FROM       buch
-    // INNER JOIN titel ON buch.id = titel.buch_id
-    // INNER JOIN abbildung ON buch.id = abbildung.buch_id
-    // WHERE      titel.titel LIKE "%n%"
-    const buecher: {
-        buch: BuchSelect;
+    // FROM       rezept
+    // INNER JOIN titel ON rezept.id = titel.rezept_id
+    // INNER JOIN zutat ON rezept.id = zutat.rezept_id
+    // WHERE      titel.titel ILIKE "%suppe%"
+    const rezepte: {
+        rezept: RezeptSelect;
         titel: TitelSelect;
-        abbildung: AbbildungSelect;
+        zutat: ZutatSelect;
     }[] = await db
         .select()
-        .from(buchTable)
-        .innerJoin(titelTable, eq(buchTable.id, titelTable.buchId))
-        .innerJoin(abbildungTable, eq(buchTable.id, abbildungTable.buchId))
-        .where(ilike(titelTable.titel, '%n%'));
-    message = styleText(['black', 'bgWhite'], 'buecher');
-    console.log(`${message}: %j`, buecher);
+        .from(rezeptTable)
+        .innerJoin(titelTable, eq(rezeptTable.id, titelTable.rezeptId))
+        .innerJoin(zutatTable, eq(rezeptTable.id, zutatTable.rezeptId))
+        .where(ilike(titelTable.titel, '%suppe%'));
+    message = styleText(['black', 'bgWhite'], 'rezepte');
+    console.log(`${message}: %j`, rezepte);
+    console.log();
+
+    // Relationale Abfrage: Rezept mit Titel (1:1) und Zutaten (1:n)
+    // https://orm.drizzle.team/docs/rqb-v2
+    const rezeptMitRelationen = await db.query.rezeptTable.findFirst({
+        where: { id: 20 },
+        with: { titelTable: true, zutatTable: true },
+    });
+    message = styleText(['black', 'bgWhite'], 'rezeptMitRelationen');
+    console.log(`${message}: %j`, rezeptMitRelationen);
     console.log();
 
     // SELECT id
-    // FROM   buch
-    // WHERE  isbn = "978-3-897-22583-1"
+    // FROM   rezept
+    // WHERE  rezeptnummer = "RZ-001"
     // LIMIT  1
-    const isbnCheck = await db
-        .select({ id: buchTable.id })
-        .from(buchTable)
-        .where(eq(buchTable.isbn, '978-3-897-22583-1'))
+    const rezeptnummerCheck = await db
+        .select({ id: rezeptTable.id })
+        .from(rezeptTable)
+        .where(eq(rezeptTable.rezeptnummer, 'RZ-001'))
         .limit(1);
-    const exists = isbnCheck.length > 0;
-    message = styleText(['black', 'bgWhite'], 'ISBN exists?');
+    const exists = rezeptnummerCheck.length > 0;
+    message = styleText(['black', 'bgWhite'], 'Rezeptnummer exists?');
     console.log(`${message}: %s`, exists);
     console.log();
 } finally {
     await db.$client.end();
 }
 
-// Drizzle-Client mit DB-User "postgres"
 const admin = drizzle({
     connection: {
         user: 'postgres',
-        database: 'buch',
+        database: 'rezept',
         password: 'p',
         host: 'localhost',
         ssl: {
@@ -140,18 +143,18 @@ const admin = drizzle({
     logger: true,
 });
 try {
-    const buecherAdmin: {
-        buch: BuchSelect;
+    const rezepteAdmin: {
+        rezept: RezeptSelect;
         titel: TitelSelect;
-        abbildung: AbbildungSelect;
+        zutat: ZutatSelect;
     }[] = await admin
         .select()
-        .from(buchTable)
-        .innerJoin(titelTable, eq(buchTable.id, titelTable.buchId))
-        .innerJoin(abbildungTable, eq(buchTable.id, abbildungTable.buchId))
-        .where(ilike(titelTable.titel, '%n%'));
-    message = styleText(['black', 'bgWhite'], 'buecherAdmin');
-    console.log(`${message}: %j`, buecherAdmin);
+        .from(rezeptTable)
+        .innerJoin(titelTable, eq(rezeptTable.id, titelTable.rezeptId))
+        .innerJoin(zutatTable, eq(rezeptTable.id, zutatTable.rezeptId))
+        .where(ilike(titelTable.titel, '%suppe%'));
+    message = styleText(['black', 'bgWhite'], 'rezepteAdmin');
+    console.log(`${message}: %j`, rezepteAdmin);
     console.log();
 } finally {
     await admin.$client.end();
