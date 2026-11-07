@@ -48,5 +48,11 @@ rezeptGetRouter.get('/:id', async (c) => {
     if (rezept === undefined) {
         return c.json({ message: `Kein Rezept mit der ID ${id} gefunden.` }, 404);
     }
-    return c.json(rezept, 200);
+
+    // ETag: Versionsnummer in Anfuehrungszeichen, z.B. "0"
+    const etag = `"${rezept.version}"`;
+    if (c.req.header('If-None-Match') === etag) {
+        return c.body(null, 304);
+    }
+    return c.json(rezept, 200, { ETag: etag });
 });

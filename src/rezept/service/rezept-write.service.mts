@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import { and, eq, sql } from 'drizzle-orm';
 import { rezeptTable, schwierigkeitsgrad, titelTable, zutatTable } from '../../db/schema.mts';
 import { db } from '../../config/db.mts';
 
@@ -62,3 +63,65 @@ export const create = async ({ titel, zutaten, schlagwoerter, ...rezept }: Neues
         await tx.insert(zutatTable).values(zutatenInsert);
         return rezeptId;
     });
+
+// Rezept ohne Rezeptnummer: alle Properties werden ersetzt
+export type GeaendertesRezept = Omit<NeuesRezept, 'rezeptnummer'>;
+
+export type UpdateResult =
+    | Readonly<{ status: 'updated'; version: number }>
+    | Readonly<{ status: 'not-found' }>
+    | Readonly<{ status: 'version-outdated' }>;
+
+// Rezept, Titel und Zutaten ersetzen (PUT). Optimistische Synchronisation: nur wenn die
+// Versionsnummer in der DB mit "version" uebereinstimmt, wird geaendert und hochgezaehlt
+export const update = async (
+    id: number,
+    version: number,
+    { titel, zutaten, schlagwoerter, schwierigkeit, datum, quelle, ...rezept }: GeaendertesRezept,
+): Promise<UpdateResult> =>
+    await db.transaction(async (tx) => {
+        const [updated] = await tx
+            .update(rezeptTable)
+            .set({
+                ...rezept,
+                // PUT ersetzt alles: nicht angegebene optionale Werte werden NULL
+                schwierigkeit: schwierigkeit ?? null,
+                datum: datum ?? null,
+                quelle: quelle ?? null,
+                schlagwoerter: schlagwoerter === undefined ? null : [...schlagwoerter],
+                version: version + 1,
+                aktualisiert: sql`now()`,
+            })
+            .where(and(eq(rezeptTable.id, id), eq(rezeptTable.version, version)))
+            .returning({ version: rezeptTable.version });
+        if (updated === undefined) {
+            const vorhanden = await tx.query.rezeptTable.findFirst({
+                columns: { id: true },
+                where: { id },
+            });
+            return vorhanden === undefined
+                ? { status: 'not-found' }
+                : { status: 'version-outdated' };
+        }
+
+        await tx
+            .update(titelTable)
+            .set({ titel: titel.titel, untertitel: titel.untertitel ?? null })
+            .where(eq(titelTable.rezeptId, id));
+        await tx.delete(zutatTable).where(eq(zutatTable.rezeptId, id));
+        const zutatenInsert = zutaten.map((zutat) => {
+            return { ...zutat, rezeptId: id };
+        });
+        await tx.insert(zutatTable).values(zutatenInsert);
+        return { status: 'updated', version: updated.version };
+    });
+
+// Loeschen mit der Rezept-ID. Titel und Zutaten werden durch ON DELETE CASCADE mitgeloescht
+// Resultat: Anzahl der geloeschten Rezepte (0 oder 1)
+export const deleteById = async (id: number) => {
+    const geloescht = await db
+        .delete(rezeptTable)
+        .where(eq(rezeptTable.id, id))
+        .returning({ id: rezeptTable.id });
+    return geloescht.length;
+};

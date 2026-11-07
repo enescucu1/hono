@@ -48,3 +48,6 @@ export const neuesRezeptSchema = z.strictObject({
         )
         .min(1),
 });
+
+// Body bei PUT /rest/:id: wie beim Anlegen, aber die Rezeptnummer kann nicht geaendert werden
+export const geaendertesRezeptSchema = neuesRezeptSchema.omit({ rezeptnummer: true });
