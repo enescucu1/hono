@@ -1,0 +1,47 @@
+meta {
+  name: Rezept 30 aendern
+  type: http
+  seq: 1
+}
+
+put {
+  url: {{baseUrl}}/rest/30
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  If-Match: {{etag}}
+}
+
+body:json {
+  {
+    "bewertung": 5,
+    "schwierigkeit": "SCHWER",
+    "kosten": 33.33,
+    "zubereitungszeit": 35,
+    "vegetarisch": true,
+    "titel": { "titel": "Tomatensuppe neu" },
+    "zutaten": [
+      { "bezeichnung": "Tomaten", "menge": 900, "einheit": "g" },
+      { "bezeichnung": "Sahne", "menge": 100, "einheit": "ml" }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 204) {
+    bru.setVar("etag", res.getHeader("etag"));
+  }
+}
+
+assert {
+  res.status: eq 204
+  res.headers.etag: isString
+}
+
+docs {
+  Braucht den ETag aus `Suche mit ID > Vorhandene ID 30`. Nach Erfolg wird der neue ETag gemerkt,
+  der Request ist also wiederholbar. PUT ersetzt Rezept, Titel und alle Zutaten.
+}

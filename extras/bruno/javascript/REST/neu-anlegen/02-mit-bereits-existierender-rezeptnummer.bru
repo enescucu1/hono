@@ -1,0 +1,42 @@
+meta {
+  name: Neues Rezept mit bereits existierender Rezeptnummer
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/rest
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "rezeptnummer": "{{rezeptnummer}}",
+    "bewertung": 4,
+    "schwierigkeit": "MITTEL",
+    "kosten": 12.5,
+    "zubereitungszeit": 40,
+    "vegetarisch": true,
+    "datum": "2026-03-01",
+    "quelle": "https://beispiel.de/rezept",
+    "schlagwoerter": ["SUPPE", "TEST"],
+    "titel": { "titel": "Kuerbissuppe", "untertitel": "Mit Ingwer" },
+    "zutaten": [
+      { "bezeichnung": "Kuerbis", "menge": 800, "einheit": "g" },
+      { "bezeichnung": "Ingwer", "menge": 1.5, "einheit": "Stueck" }
+    ]
+  }
+}
+
+assert {
+  res.status: eq 422
+}
+
+docs {
+  Benutzt die Rezeptnummer aus `Neues Rezept`. Erst dieses senden.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: Neues Rezept mit ungueltigen Daten
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/rest
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "rezeptnummer": "XY-1",
+    "bewertung": 9,
+    "kosten": -1,
+    "zubereitungszeit": 0,
+    "titel": { "titel": "" },
+    "zutaten": []
+  }
+}
+
+assert {
+  res.status: eq 422
+  res.body.details.fieldErrors.bewertung: isDefined
+}

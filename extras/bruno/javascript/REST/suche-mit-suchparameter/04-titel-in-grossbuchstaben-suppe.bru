@@ -1,0 +1,15 @@
+meta {
+  name: Titel in Grossbuchstaben SUPPE
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/rest?titel=SUPPE
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

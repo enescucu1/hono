@@ -1,0 +1,15 @@
+meta {
+  name: Nicht-vorhandene Property titl
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/rest?titl=suppe
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 422
+}

@@ -1,0 +1,31 @@
+meta {
+  name: Neues Rezept mit unbekannter Property
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/rest
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "rezeptnummer": "RZ-777",
+    "bewertung": 1,
+    "kosten": 1,
+    "zubereitungszeit": 1,
+    "titel": { "titel": "X" },
+    "zutaten": [{ "bezeichnung": "a", "menge": 1, "einheit": "g" }],
+    "foo": "bar"
+  }
+}
+
+assert {
+  res.status: eq 422
+}

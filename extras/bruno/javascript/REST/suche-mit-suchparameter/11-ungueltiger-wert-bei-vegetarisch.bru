@@ -1,0 +1,15 @@
+meta {
+  name: Ungueltiger Wert bei vegetarisch
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/rest?vegetarisch=vielleicht
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 422
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Ungueltige Schwierigkeit XXX
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/rest?schwierigkeit=XXX
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 422
+}

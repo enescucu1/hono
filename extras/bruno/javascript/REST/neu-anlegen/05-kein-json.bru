@@ -1,0 +1,23 @@
+meta {
+  name: Neues Rezept ohne JSON im Body
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/rest
+  body: text
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:text {
+  das ist kein json
+}
+
+assert {
+  res.status: eq 422
+}

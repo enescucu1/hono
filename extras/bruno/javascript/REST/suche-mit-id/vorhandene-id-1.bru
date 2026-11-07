@@ -1,0 +1,20 @@
+meta {
+  name: Vorhandene ID 1
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/rest/1
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.id: eq 1
+  res.body.rezeptnummer: eq RZ-001
+  res.body.titel.titel: eq Spaghetti Carbonara
+  res.body.zutaten: isArray
+  res.headers.etag: isString
+}

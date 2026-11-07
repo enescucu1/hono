@@ -1,0 +1,13 @@
+vars:pre-request {
+  baseUrl: http://localhost:3000
+}
+
+docs {
+  # Rezept (Aufgabe 3: Hono, Drizzle, PostgreSQL)
+
+  Voraussetzung: PostgreSQL und der Appserver laufen (`pnpm run dev`).
+  Die Adresse steht in der Variable `baseUrl` (Collection > Vars).
+
+  Reihenfolge fuer PUT: Erst `Suche mit ID > Vorhandene ID 30` senden. Dabei wird der
+  ETag als Variable `etag` gemerkt und von den PUT-Requests als `If-Match` benutzt.
+}

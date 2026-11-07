@@ -1,0 +1,15 @@
+meta {
+  name: Nicht-vorhandenes Rezept 999999 loeschen
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/rest/999999
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}

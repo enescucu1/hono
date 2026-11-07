@@ -1,0 +1,15 @@
+meta {
+  name: Alle Seite 2 mit 3 pro Seite
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/rest?seite=2&groesse=3
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

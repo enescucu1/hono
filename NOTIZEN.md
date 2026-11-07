@@ -159,6 +159,20 @@ Beispiel für den Body von `POST` (bei `PUT` ohne `rezeptnummer`):
 
 Pflicht sind `rezeptnummer` (Format `RZ-123`), `bewertung` (0 bis 5), `kosten`, `zubereitungszeit` (Minuten), `titel.titel` und mindestens eine Zutat. Optional sind `schwierigkeit`, `vegetarisch` (Standard `false`), `datum`, `quelle`, `schlagwoerter` und `titel.untertitel`.
 
+### Bruno-Collection (extras/bruno/javascript)
+
+Collection `rezept` mit 32 Requests im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
+
+- `REST > Suche mit ID`: GET mit ID 1, 20, 30, unbekannter und ungültiger ID, `If-None-Match` (304)
+- `REST > Suche mit Suchparameter`: 11 Requests (Alle, Seite 2, Titel, vegetarisch, ungültige Parameter mit 422, kein Treffer mit 404)
+- `REST > Neu anlegen`: POST mit zufälliger Rezeptnummer (wiederholbar), doppelte Nummer, ungültige Daten, unbekannte Property, kein JSON
+- `REST > Ändern`: PUT mit `If-Match`, falsche oder fehlende Version, kaputter Header, unbekannte ID, ungültige Daten, Rezeptnummer im Body
+- `REST > Löschen`: DELETE für Rezept 50, das neu angelegte Rezept und eine unbekannte ID
+
+Zusammenhang der Requests: `Vorhandene ID 30` merkt den ETag in der Variable `etag`, die PUT-Requests schicken ihn als `If-Match` und aktualisieren ihn nach Erfolg. `Neues Rezept` merkt die ID aus dem Header `Location` in `neueId` (für `Neu angelegtes Rezept löschen`) und die Rezeptnummer in `rezeptnummer` (für den Request mit doppelter Nummer). Jeder Request hat Assertions. Mit der Bruno-CLI 4.3.0 gegen die Seed-Daten geprüft: 32 von 32 Requests und 48 von 48 Assertions bestanden, auch beim zweiten Durchlauf.
+
+Die Testfälle für Vitest (siehe oben) entsprechen dieser Collection.
+
 ### Code-Struktur
 
 ```text
@@ -247,8 +261,8 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 ### Aktuell (Enes)
 
 - [x] Pull Request #4 und #5 gemergt
-- [ ] Bruno-Collection im Repository ablegen: `extras/bruno/javascript` (die `.gitignore` schließt dort `environments` und Bilder aus, Secrets bleiben draußen)
-- [ ] Mail an Herrn Zimmermann mit Repo, Beispiel
+- [ ] Bruno-Collection (`bruno-rezept.zip`) ins Repository: `extras/bruno/javascript`, danach in Bruno öffnen und prüfen
+- [ ] Mail an Herrn Zimmermann mit Repo, Beispiel und zwei Fragen (Hono-Version, Zertifikat und Schlüssel für HTTPS). Entwurf liegt vor
 
 ### Als Nächstes (Sai)
 

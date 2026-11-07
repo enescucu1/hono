@@ -1,0 +1,57 @@
+meta {
+  name: Neues Rezept
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/rest
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "rezeptnummer": "{{rezeptnummer}}",
+    "bewertung": 4,
+    "schwierigkeit": "MITTEL",
+    "kosten": 12.5,
+    "zubereitungszeit": 40,
+    "vegetarisch": true,
+    "datum": "2026-03-01",
+    "quelle": "https://beispiel.de/rezept",
+    "schlagwoerter": ["SUPPE", "TEST"],
+    "titel": { "titel": "Kuerbissuppe", "untertitel": "Mit Ingwer" },
+    "zutaten": [
+      { "bezeichnung": "Kuerbis", "menge": 800, "einheit": "g" },
+      { "bezeichnung": "Ingwer", "menge": 1.5, "einheit": "Stueck" }
+    ]
+  }
+}
+
+script:pre-request {
+  // zufaellige Rezeptnummer, damit der Request wiederholbar ist
+  const nummer = String(Math.floor(100000 + Math.random() * 900000));
+  bru.setVar("rezeptnummer", `RZ-${nummer}`);
+}
+
+script:post-response {
+  if (res.status === 201) {
+    const location = res.getHeader("location");
+    bru.setVar("neueId", location.split("/").pop());
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.headers.location: contains /rest/
+}
+
+docs {
+  Legt ein Rezept mit zufaelliger Rezeptnummer an. Die ID aus dem Header `Location`
+  wird in der Variable `neueId` gemerkt (siehe `Neu angelegtes Rezept loeschen`).
+}

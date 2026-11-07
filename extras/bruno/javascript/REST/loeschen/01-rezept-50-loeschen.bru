@@ -1,0 +1,19 @@
+meta {
+  name: Rezept 50 loeschen
+  type: http
+  seq: 1
+}
+
+delete {
+  url: {{baseUrl}}/rest/50
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Titel und Zutaten werden per CASCADE mitgeloescht. Auch bei einem zweiten Aufruf 204.
+}

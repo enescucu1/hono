@@ -1,0 +1,16 @@
+meta {
+  name: Titel enthaelt suppe
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/rest?titel=suppe
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body[0].titel.titel: contains suppe
+}

@@ -1,0 +1,35 @@
+meta {
+  name: Nicht-vorhandenes Rezept 999999 aendern
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/rest/999999
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  If-Match: "0"
+}
+
+body:json {
+  {
+    "bewertung": 5,
+    "schwierigkeit": "SCHWER",
+    "kosten": 33.33,
+    "zubereitungszeit": 35,
+    "vegetarisch": true,
+    "titel": { "titel": "Tomatensuppe neu" },
+    "zutaten": [
+      { "bezeichnung": "Tomaten", "menge": 900, "einheit": "g" },
+      { "bezeichnung": "Sahne", "menge": 100, "einheit": "ml" }
+    ]
+  }
+}
+
+assert {
+  res.status: eq 404
+}

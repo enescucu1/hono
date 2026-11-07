@@ -1,0 +1,15 @@
+meta {
+  name: Seitengroesse 100 ist zu gross
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/rest?groesse=100
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 422
+}

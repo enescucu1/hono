@@ -1,0 +1,15 @@
+meta {
+  name: Nicht-vorhandene ID 999999
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/rest/999999
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+}

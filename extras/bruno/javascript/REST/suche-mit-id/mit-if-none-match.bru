@@ -1,0 +1,23 @@
+meta {
+  name: Vorhandene ID 30 mit If-None-Match
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/rest/30
+  body: none
+  auth: none
+}
+
+headers {
+  If-None-Match: {{etag}}
+}
+
+assert {
+  res.status: eq 304
+}
+
+docs {
+  Braucht den ETag aus `Vorhandene ID 30 (merkt den ETag)`. Passt er zur aktuellen Version, antwortet der Server mit 304 ohne Body.
+}

@@ -1,0 +1,17 @@
+meta {
+  name: Vegetarisch und EINFACH
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/rest?vegetarisch=true&schwierigkeit=EINFACH
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body[0].vegetarisch: eq true
+  res.body[0].schwierigkeit: eq EINFACH
+}

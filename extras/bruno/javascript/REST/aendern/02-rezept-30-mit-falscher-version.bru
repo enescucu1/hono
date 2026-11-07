@@ -1,0 +1,35 @@
+meta {
+  name: Rezept 30 mit falscher Versionsnummer aendern
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/rest/30
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  If-Match: "9999"
+}
+
+body:json {
+  {
+    "bewertung": 5,
+    "schwierigkeit": "SCHWER",
+    "kosten": 33.33,
+    "zubereitungszeit": 35,
+    "vegetarisch": true,
+    "titel": { "titel": "Tomatensuppe neu" },
+    "zutaten": [
+      { "bezeichnung": "Tomaten", "menge": 900, "einheit": "g" },
+      { "bezeichnung": "Sahne", "menge": 100, "einheit": "ml" }
+    ]
+  }
+}
+
+assert {
+  res.status: eq 412
+}
