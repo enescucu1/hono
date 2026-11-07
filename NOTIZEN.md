@@ -11,7 +11,7 @@ Letzter Stand: 7.11.2026
 - OR-Mapping mit **Drizzle** statt Prisma (die Folie ist veraltet, Drizzle hat mehr Downloads)
 - Package Manager: **pnpm** (nicht npm, performanter), Runtime Node und Bun
 - Die PlantUML-Diagramme aus Aufgabe 2 sind in dieser Aufgabe enthalten
-- Arbeitsweise im Team: Feature-Branches mit Pull Requests, der andere prüft (dient als Code-Review)
+- Arbeitsweise im Team: Feature-Branches mit Pull Requests, Enes mergt selbst
 
 ## Regeln des Dozenten
 
@@ -83,6 +83,8 @@ Letzter Stand: 7.11.2026
 - Die Namen der Relationen in `relations.mts` erscheinen im JSON der REST-Schnittstelle. Deshalb heißen sie `titel` und `zutaten` (statt `titelTable` und `zutatTable`), bei `titelTable` und `zutatTable` auf der Gegenseite `rezept`
 - Drizzle akzeptiert bei `exactOptionalPropertyTypes` (`@tsconfig/strictest`) keine Filter mit dem Wert `undefined` in `where`. Deshalb kommen nur vorhandene Suchkriterien per Spread in den Filter: `...(titel === undefined ? {} : { titel: ... })`
 - Zod 4: `z.strictObject` lehnt unbekannte Parameter ab (Tippfehler), `z.stringbool()` wandelt `"true"` und `"false"` aus der Query in Booleans um, `z.flattenError` liefert die Fehler für die Antwort
+- `arrow-body-style` (mit `requireReturnForObjectLiteral`) verlangt bei Arrow-Functions, die ein Objekt zurückgeben, einen Block mit `return`, auch bei `map`
+- `c.req.json().catch(() => undefined)` verhindert einen Fehler 500 bei ungültigem JSON. Zod meldet dann "expected object" und die Route antwortet mit 422
 - `drizzle-kit pull` erzeugt unbrauchbare Namen (`rezeptInRezept`, `titelInRezepts`). In `relations.mts` heißt der Parameter `rel` statt `r`, weil die Oxlint-Regel `id-length` einstellige Namen verbietet (Ausnahmen nur `c`, `i`, `T`, `_`)
 - Die `.env` ist nicht im Repository. Jeder legt seine eigene an, mit eigenem Keycloak-Secret
 - Docker Desktop muss laufen, sonst meldet `docker` einen Fehler zur Verbindung mit der Docker-API
@@ -115,13 +117,13 @@ Letzter Stand: 7.11.2026
 - [x] `beispiele.mts` und `beispiele-write.mts` auf Rezept umgestellt, relationale Abfrage mit `db.query` ergänzt. Verzeichnis `init/buch` per `git rm -r` aus dem Repo entfernt
 - [x] `pnpm exec oxfmt`, `pnpm run lint` (0 Fehler) und `pnpm run tsc` (ohne Fehler)
 - [x] Beide Beispiele laufen gegen die Rezept-DB: `kosten` und `menge` kommen als `number`, die relationale Abfrage (`db.query`) liefert Rezept 20 mit Titel (`untertitel: null`) und drei Zutaten in **einer** SQL-Abfrage. `beispiele-write.mts` hat Rezept 1000 angelegt, Rezept 30 auf Version 1 geändert und Rezept 70 gelöscht (nicht nochmal ausführen)
-- [x] Pull Request #1 gemergt (`main` auf `868b5c0`). Sai hat ihn noch nicht geprüft, nachträglicher Review offen
+- [x] Pull Request #1 gemergt (`main` auf `868b5c0`)
 - [x] Branch `feature/rezept-db` gelöscht (GitHub und lokal)
 
 ### Hono: erste REST-Route (7.11.)
 
 - [x] Branch `feature/hono-rest` von `main`
-- [ ] Im Forum bestätigen lassen: Hono 5.0.0-rc.0 (steht in `minimumReleaseAgeExclude` der `pnpm-workspace.yaml`) oder `latest` 4.13.17
+- [ ] Beim Dozenten bestätigen lassen (Mail an Herrn Zimmermann mit Repo, Beispiel und zwei Fragen): Hono 5.0.0-rc.0 (steht in `minimumReleaseAgeExclude` der `pnpm-workspace.yaml`) oder `latest` 4.13.17, Zertifikat und Schlüssel für HTTPS
 - [x] `pnpm add hono@5.0.0-rc.0 @hono/node-server@2.1.6`
 - [x] Gerüst: `src/config/db.mts`, `src/config/server.mts`, `src/rezept/service/rezept-read.service.mts`, `src/rezept/rest/rezept-get.router.mts`, `src/server.mts`
 - [x] Relationen umbenannt (`titel`, `zutaten`, `rezept`) in `relations.mts`, im Service und in `beispiele.mts`
@@ -129,7 +131,7 @@ Letzter Stand: 7.11.2026
 - [x] `pnpm exec oxfmt`, `pnpm run lint` (0 Fehler), `pnpm run tsc`
 - [x] `pnpm run dev`, `GET http://localhost:3000/rest/20` im Browser: 200 mit `titel` und drei `zutaten`
 - [x] Commit `dfa5ac2` und Push auf `feature/hono-rest`
-- [ ] Pull Request öffnen, Sai prüft (diesmal auf die Freigabe warten), danach mergen, `main` lokal holen, Branch löschen
+- [ ] Pull Request öffnen, selbst mergen, `main` lokal holen, Branch löschen
 
 ### REST: Suche mit Query-Parametern und Zod (7.11.)
 
@@ -139,9 +141,34 @@ Letzter Stand: 7.11.2026
 - [ ] Dateien einspielen: `suchkriterien.mts` (Zod-Schema, neu), `rezept-read.service.mts` (`find` mit Filter und Pagination), `rezept-get.router.mts` (`GET /rest`)
 - [ ] `pnpm exec oxfmt`, `pnpm run lint`, `pnpm run tsc`
 - [ ] Im Browser testen: `/rest`, `/rest?titel=suppe`, `/rest?vegetarisch=true&schwierigkeit=EINFACH`, `/rest?seite=2&groesse=3`, ungültige Parameter (422), keine Treffer (404)
-- [ ] Commit, Pull Request, Sai prüft (auf die Freigabe warten)
+- [ ] Commit, Pull Request, selbst mergen, `main` lokal holen, Branch löschen
 
 Entscheidungen: Suche liefert 404, wenn nichts gefunden wird (wie bei `GET /rest/:id`). Ungültige oder unbekannte Parameter liefern 422 mit den Fehlern von Zod. Standardmäßig 5 Rezepte pro Seite, maximal 20, sortiert nach ID.
+
+### REST: POST /rest (7.11.)
+
+- [ ] Pull Request der Suche mergen, `main` holen, dann Branch `feature/rest-post` von `main`
+- [ ] Dateien einspielen: `rezept-schema.mts` (Zod-Schema für den Body), `rezept-write.router.mts` (`POST /rest`), `rezept-write.service.mts` (`create` in einer Transaktion), `rezept-read.service.mts` (neu: `existsRezeptnummer`), `server.mts` (zweiter Router)
+- [ ] `pnpm exec oxfmt`, `pnpm run lint`, `pnpm run tsc`
+- [x] Mit Bruno getestet: gültiger Body ergibt 201 (neue ID 1001), im Log Prüfung der Rezeptnummer, `begin`, drei `insert`, `commit`
+- [ ] Weitere Fälle in Bruno: doppelte Rezeptnummer (422), ungültige Daten (422), kein JSON (422)
+- [ ] Commit, Pull Request, selbst mergen, `main` lokal holen, Branch löschen
+
+Entscheidungen: Antwort 201 ohne Body, dafür Header `Location: http://localhost:3000/rest/<id>`. Doppelte Rezeptnummer, ungültige Daten, unbekannte Properties und kein JSON liefern 422. Rezept, Titel und Zutaten werden in einer Transaktion angelegt. Kein E-Mail-Versand (bei Aufgabe 1 gab es "Neuer Patient" an Mailpit), die Frage ist offen.
+
+### REST: PUT, DELETE und ETag (7.11.)
+
+- [ ] Nach dem Merge von POST: `main` holen, Branch `feature/rest-put-delete` von `main`
+- [ ] Dateien einspielen (`rest-put-delete.zip`): `rezept-schema.mts` (neu: `geaendertesRezeptSchema`), `rezept-write.service.mts` (neu: `update`, `deleteById`), `rezept-write.router.mts` (neu: `PUT` und `DELETE`), `rezept-get.router.mts` (ETag und 304)
+- [ ] `pnpm exec oxfmt`, `pnpm run lint`, `pnpm run tsc`
+- [ ] Mit Bruno testen (Fälle siehe unten)
+- [ ] Commit, Pull Request, selbst mergen, `main` lokal holen, Branch löschen
+
+Ablauf von PUT: `GET /rest/30` liefert den Header `ETag: "0"` (Versionsnummer). `PUT /rest/30` braucht `If-Match: "0"`. Fehlt der Header: 428. Falsche Form oder veraltete Version: 412. Gültige Daten: 204 mit `ETag: "1"`, die Version wird hochgezählt. `GET` mit `If-None-Match: "0"` und unveränderter Version liefert 304. `DELETE` liefert immer 204, auch wenn es das Rezept nicht gibt (wie bei Aufgabe 1).
+
+Entscheidungen: PUT ersetzt Rezept, Titel und alle Zutaten (nicht angegebene optionale Werte werden NULL). Die Rezeptnummer ist unveränderlich (steht sie im Body: 422). Ungültige ID bei PUT: 404.
+
+Getestet gegen die Testdaten: GET mit ETag, 304, PUT ohne If-Match (428), kaputter Header (412), falsche Version (412), ungültiger Body (422), Rezeptnummer im Body (422), unbekannte ID (404), PUT mit richtiger Version (204, Version 1, Zutaten ersetzt), PUT mit veralteter Version (412), DELETE (204, danach GET 404, Titel und Zutaten mit weg).
 
 ### Danach
 
@@ -156,6 +183,7 @@ Entscheidungen: Suche liefert 404, wenn nichts gefunden wird (wie bei `GET /rest
 - [ ] GitHub Actions (Oxlint, Oxfmt)
 - [ ] Lasttests mit Grafana k6
 - [ ] OWASP Dependency Check, `pnpm audit`, SonarQube, Pino-Logging
+- [ ] Bruno-Collection im Repository ablegen: `extras/bruno/javascript` (die `.gitignore` schließt dort `environments` und Bilder aus, Secrets bleiben also draußen)
 - [ ] Projektplan (Sai und Enes) und Zeiterfassung (Enes) in Excel
 - [ ] Node auf mindestens 26.13 aktualisieren, Docker-Images für Node 26.13 und Bun 1.4.4 im Forum klären
 - [ ] `.env.example` ohne Secrets ins Repository, damit Sai eine Vorlage hat

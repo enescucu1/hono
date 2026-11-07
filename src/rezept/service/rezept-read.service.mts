@@ -51,3 +51,8 @@ export const find = async ({ titel, schwierigkeit, vegetarisch, seite, groesse }
         limit: groesse,
         offset: (seite - 1) * groesse,
     });
+
+// Gibt es schon ein Rezept mit dieser Rezeptnummer?
+export const existsRezeptnummer = async (rezeptnummer: string) =>
+    (await db.query.rezeptTable.findFirst({ columns: { id: true }, where: { rezeptnummer } })) !==
+    undefined;
