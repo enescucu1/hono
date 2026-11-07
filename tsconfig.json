@@ -1,0 +1,51 @@
+{
+  // https://www.typescriptlang.org/tsconfig
+  // https://github.com/tsconfig/bases/blob/main/bases/strictest.json
+  // https://github.com/tsconfig/bases/#node-26-tsconfigjson
+  // https://stackoverflow.com/questions/63742790/unable-to-import-esm-ts-module-in-node/65163089#65163089
+  // https://2ality.com/2025/01/tsconfig-json.html
+  "extends": [
+    "@tsconfig/strictest/tsconfig",
+    "@tsconfig/node26/tsconfig",
+    "@tsconfig/node-ts"
+  ],
+  "include": ["src/**/*", "test/**/*", "scripts/*"],
+  "compilerOptions": {
+    // uebersetzter JS-Code im Hinblick auf Module. "nodenext" erfordert dasselbe fuer "moduleResolution"
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    // "moduleDetection": "force", // default ab TS 5.9
+    // https://www.typescriptlang.org/tsconfig/#target
+    "target": "esnext",
+    "lib": ["esnext"],
+    "types": ["pg", "nodemailer", "bun", "k6", "node"], // https://www.typescriptlang.org/tsconfig/#types
+
+    // "allowImportingTsExtensions": true // implizit bei rewriteRelativeImportExtensions: Import mit .ts statt .js
+    // "allowUnreachableCode": false, // strictest: return bei then-else und try-catch
+    // "allowUnusedLabels": false, // strictest: Labels muessen auch benutzt werden
+    "declaration": true,
+    // "esModuleInterop": true, // strictest; Kompatibilitaet zwischen CommonJS und ES Modulen
+    // "erasableSyntaxOnly": true, // node-ts: NICHT enum, parameter properties in constructor(), namespace, import aliases
+    // "exactOptionalPropertyTypes": true, // strictest: bei optionalen Properties ggf. explizit undefined spezifizieren
+    // "forceConsistentCasingInFileNames": true, // default
+    "incremental": true,
+    // "isolatedModules": true, // strictest: fuer Single-file transpiler https://www.typescriptlang.org/tsconfig/#isolatedModules
+    "noErrorTruncation": true,
+    // "noFallthroughCasesInSwitch": true, // strictest: "break" muss bei switch vorhanden sein
+    // "noImplicitAny": true, // strict (s.u.): Fehler bei implizitem Typ "any"
+    // "noImplicitOverride": true, // strictest: Schluesselwort "override"
+    // "noImplicitReturns": true, // strictest: bei jedem Code-Pfad muss es "return" geben
+    // "noImplicitThis": true, // strict (s.u.) Fehler bei this mit implizitem "any"
+    // "noUncheckedIndexedAccess": true, // strictest: undefined bei Resultaten fuer Index-Signaturen
+    // "noUnusedLocals": true, // strictest: keine nicht-benutzten lokalen Variablen
+    // "noUnusedParameters": true, // strictest: keine nicht-benutzen Parameter
+    "outDir": "./dist",
+    "removeComments": true,
+    "rootDir": ".", // z.B. oxlint.config.mts
+    // "skipLibCheck": true, // default ab TS 5.9, node26
+    "sourceMap": true // *.map fuer Debugger
+    // "strict": true, // strictest: alle "strict"-Optionen aktivieren
+    // "useUnknownInCatchVariables": true // strict (s.o.): unknown als default-Typ bei catch-Klauseln
+    // "verbatimModuleSyntax": true, // node-ts: : "type" bei import {} https://www.typescriptlang.org/tsconfig/#verbatimModuleSyntax
+  }
+}

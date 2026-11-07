@@ -1,0 +1,82 @@
+{
+  "name": "buch",
+  "version": "2026.10.1",
+  "private": true,
+  "description": "Beispiel",
+  "keywords": [
+    "Drizzle",
+    "Oxfmt",
+    "Oxlint",
+    "PostgreSQL",
+    "TypeScript 7 (Go)",
+    "pnpm",
+    "tsrs"
+  ],
+  "license": "GPL-3.0",
+  "author": "Juergen Zimmermann <Juergen.Zimmermann@h-ka.de> (https://www.h-ka.de)",
+  "type": "module",
+  "scripts": {
+    "start": "echo Beispiel fuer Drizzle",
+    "test": "echo Keine Tests",
+    "clean": "node --eval=\"import fs from 'node:fs/promises'; await fs.rm('dist', { recursive: true, force: true });\"",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check",
+    "tsc": "tsc --pretty",
+    "tsrs": "tsrs --pretty"
+  },
+  "dependencies": {
+    "dotenv": "18.0.9",
+    "drizzle-orm": "1.0.0-rc.5",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@stylistic/eslint-plugin": "5.10.0",
+    "@tsconfig/node-ts": "23.6.4",
+    "@tsconfig/node26": "26.0.1",
+    "@tsconfig/strictest": "2.0.8",
+    "@types/bun": "1.4.4",
+    "@types/k6": "2.3.1",
+    "@types/node": "26.6.6",
+    "@types/nodemailer": "8.0.2",
+    "@types/pg": "8.23.1",
+    "drizzle-kit": "1.0.0-rc.5",
+    "globals": "17.14.0",
+    "oxfmt": "0.76.0",
+    "oxlint": "1.91.0",
+    "oxlint-tsgolint": "7.0.2005",
+    "tsrs": "0.22.0-ts7.1.0-beta",
+    "tsx": "4.23.15",
+    "typescript": "7.1.0-beta"
+  },
+  "overrides": {
+    "leasot": {
+      "lodash": "^4.18.1"
+    }
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^12.18.0",
+      "onFail": "warn"
+    },
+    "runtime": [
+      {
+        "name": "node",
+        "version": "^26.13.0",
+        "onFail": "warn"
+      },
+      {
+        "name": "bun",
+        "version": "^1.4.4",
+        "onFail": "warn"
+      }
+    ]
+  },
+  "engines": {
+    "bun": "^1.4.4",
+    "node": "^26.13.0",
+    "pnpm": "^12.18.0"
+  }
+}
