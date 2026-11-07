@@ -13,11 +13,19 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
--- Aufruf:   psql --dbname=buch --username=postgres --file=/init/buch/sql/copy-csv.sql
+-- Aufruf:   psql --dbname=postgres --username=postgres --file=/init/rezept/sql/create-db.sql
 
-SET search_path TO buch;
+-- https://www.postgresql.org/docs/current/sql-createuser.html
+-- https://www.postgresql.org/docs/current/sql-createrole.html
+CREATE USER rezept PASSWORD 'p';
 
--- https://www.postgresql.org/docs/current/sql-copy.html
-COPY buch FROM '/init/buch/csv/buch.csv' (FORMAT csv, DELIMITER ';', HEADER true);
-COPY titel FROM '/init/buch/csv/titel.csv' (FORMAT csv, DELIMITER ';', HEADER true);
-COPY abbildung FROM '/init/buch/csv/abbildung.csv' (FORMAT csv, DELIMITER ';', HEADER true);
+-- https://www.postgresql.org/docs/current/sql-createdatabase.html
+CREATE DATABASE rezept;
+
+-- https://www.postgresql.org/docs/current/role-attributes.html
+-- https://www.postgresql.org/docs/current/ddl-priv.html
+-- https://www.postgresql.org/docs/current/sql-grant.html
+GRANT ALL ON DATABASE rezept TO rezept;
+
+-- https://www.postgresql.org/docs/current/sql-createtablespace.html
+CREATE TABLESPACE rezeptspace OWNER rezept LOCATION '/tablespace/rezept';

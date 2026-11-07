@@ -13,64 +13,44 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
--- Aufruf:   psql --dbname=buch --username=buch --file=/init/buch/sql/create-table.sql
-
--- text statt varchar(n):
--- "There is no performance difference among these three types, apart from a few extra CPU cycles
--- to check the length when storing into a length-constrained column"
--- ggf. CHECK(char_length(nachname) <= 255)
-
--- Indexe auflisten:
--- psql --dbname=buch --username=buch
---  SELECT   tablename, indexname, indexdef, tablespace
---  FROM     pg_indexes
---  WHERE    schemaname = 'buch'
---  ORDER BY tablename, indexname;
---  \q
+-- Aufruf:   psql --dbname=rezept --username=rezept --file=/init/rezept/sql/create-table.sql
 
 -- https://www.postgresql.org/docs/current/manage-ag-tablespaces.html
-SET default_tablespace = buchspace;
+SET default_tablespace = rezeptspace;
 
--- https://www.postgresql.org/docs/current/app-psql.html
 -- https://www.postgresql.org/docs/current/ddl-schemas.html
--- https://www.postgresql.org/docs/current/ddl-schemas.html#DDL-SCHEMAS-CREATE
--- "user-private schema" (Default-Schema: public)
-CREATE SCHEMA IF NOT EXISTS AUTHORIZATION buch;
+CREATE SCHEMA IF NOT EXISTS AUTHORIZATION rezept;
 
-ALTER ROLE buch SET search_path = 'buch';
-set search_path to 'buch';
+ALTER ROLE rezept SET search_path = 'rezept';
+set search_path to 'rezept';
 
--- https://www.postgresql.org/docs/current/sql-createtype.html
 -- https://www.postgresql.org/docs/current/datatype-enum.html
-CREATE TYPE buchart AS ENUM ('EPUB', 'HARDCOVER', 'PAPERBACK');
+CREATE TYPE schwierigkeitsgrad AS ENUM ('EINFACH', 'MITTEL', 'SCHWER');
 
--- https://www.postgresql.org/docs/current/sql-createtable.html
--- https://www.postgresql.org/docs/current/datatype.html
-CREATE TABLE IF NOT EXISTS buch (
+CREATE TABLE IF NOT EXISTS rezept (
                   -- https://www.postgresql.org/docs/current/datatype-numeric.html#DATATYPE-INT
                   -- https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-PRIMARY-KEYS
                   -- impliziter Index fuer Primary Key
                   -- "GENERATED ALWAYS AS IDENTITY" gemaess SQL-Standard
-                  -- entspricht SERIAL mit generierter Sequenz buch_id_seq
     id            integer GENERATED ALWAYS AS IDENTITY(START WITH 1000) PRIMARY KEY,
                   -- https://www.postgresql.org/docs/current/ddl-constraints.html#id-1.5.4.6.6
     version       integer NOT NULL DEFAULT 0,
                   -- impliziter Index als B-Baum durch UNIQUE
                   -- https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-UNIQUE-CONSTRAINTS
-    isbn          text NOT NULL UNIQUE,
+    rezeptnummer  text NOT NULL UNIQUE,
                   -- https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-CHECK-CONSTRAINTS
-                  -- https://www.postgresql.org/docs/current/functions-matching.html#FUNCTIONS-POSIX-REGEXP
-    rating        integer NOT NULL CHECK (rating >= 0 AND rating <= 5),
-    art           buchart,
+    bewertung     integer NOT NULL CHECK (bewertung >= 0 AND bewertung <= 5),
+    schwierigkeit schwierigkeitsgrad,
                   -- https://www.postgresql.org/docs/current/datatype-numeric.html#DATATYPE-NUMERIC-DECIMAL
-                  -- 10 Stellen, davon 2 Nachkommastellen
-    preis         decimal(8,2) NOT NULL,
-    rabatt        decimal(4,3) NOT NULL,
+                  -- 8 Stellen, davon 2 Nachkommastellen
+    kosten        decimal(8,2) NOT NULL,
+                  -- Zubereitungszeit in Minuten
+    zubereitungszeit integer NOT NULL CHECK (zubereitungszeit > 0),
                   -- https://www.postgresql.org/docs/current/datatype-boolean.html
-    lieferbar     boolean NOT NULL DEFAULT FALSE,
+    vegetarisch   boolean NOT NULL DEFAULT FALSE,
                   -- https://www.postgresql.org/docs/current/datatype-datetime.html
     datum         date,
-    homepage      text,
+    quelle        text,
                   -- https://www.postgresql.org/docs/current/datatype-json.html
     schlagwoerter jsonb,
                   -- https://www.postgresql.org/docs/current/datatype-datetime.html
@@ -78,28 +58,21 @@ CREATE TABLE IF NOT EXISTS buch (
     aktualisiert  timestamp NOT NULL DEFAULT NOW()
 );
 
+-- 1:1 zu rezept (UNIQUE bei rezept_id)
 CREATE TABLE IF NOT EXISTS titel (
     id          integer GENERATED ALWAYS AS IDENTITY(START WITH 1000) PRIMARY KEY,
     titel       text NOT NULL,
     untertitel  text,
                 -- https://www.postgresql.org/docs/current/ddl-constraints.html#DDL-CONSTRAINTS-FK
-    buch_id     integer NOT NULL UNIQUE REFERENCES buch ON DELETE CASCADE
+    rezept_id   integer NOT NULL UNIQUE REFERENCES rezept ON DELETE CASCADE
 );
 
-
-CREATE TABLE IF NOT EXISTS abbildung (
-    id              integer GENERATED ALWAYS AS IDENTITY(START WITH 1000) PRIMARY KEY,
-    beschriftung    text NOT NULL,
-    content_type    text NOT NULL,
-    buch_id         integer NOT NULL REFERENCES buch ON DELETE CASCADE
+-- 1:n zu rezept
+CREATE TABLE IF NOT EXISTS zutat (
+    id           integer GENERATED ALWAYS AS IDENTITY(START WITH 1000) PRIMARY KEY,
+    bezeichnung  text NOT NULL,
+    menge        decimal(8,2) NOT NULL CHECK (menge > 0),
+    einheit      text NOT NULL,
+    rezept_id    integer NOT NULL REFERENCES rezept ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS abbildung_buch_id_idx ON abbildung(buch_id);
-
-CREATE TABLE IF NOT EXISTS buch_file (
-    id              integer GENERATED ALWAYS AS IDENTITY(START WITH 1000) PRIMARY KEY,
-    data            bytea NOT NULL,
-    filename        text NOT NULL,
-    mimetype        text,
-    buch_id         integer NOT NULL UNIQUE REFERENCES buch ON DELETE CASCADE
-);
-CREATE INDEX IF NOT EXISTS buch_file_buch_id_idx ON buch_file(buch_id);
+CREATE INDEX IF NOT EXISTS zutat_rezept_id_idx ON zutat(rezept_id);

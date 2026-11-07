@@ -13,36 +13,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import { abbildungTable, buchFileTable, buchTable, titelTable } from './schema.mts';
+import { rezeptTable, titelTable, zutatTable } from './schema.mts';
 import { defineRelations } from 'drizzle-orm';
 
-export const relations = defineRelations(
-    { abbildungTable, buchTable, buchFileTable, titelTable },
-    (rel) => {
-        return {
-            abbildungTable: {
-                buchTable: rel.one.buchTable({
-                    from: rel.abbildungTable.buchId,
-                    to: rel.buchTable.id,
-                }),
-            },
-            buchTable: {
-                abbildungTable: rel.many.abbildungTable(),
-                buchFileTable: rel.one.buchFileTable(),
-                titelTable: rel.one.titelTable(),
-            },
-            buchFileTable: {
-                buchTable: rel.one.buchTable({
-                    from: rel.buchFileTable.buchId,
-                    to: rel.buchTable.id,
-                }),
-            },
-            titelTable: {
-                buchTable: rel.one.buchTable({
-                    from: rel.titelTable.buchId,
-                    to: rel.buchTable.id,
-                }),
-            },
-        };
-    },
-);
+export const relations = defineRelations({ rezeptTable, titelTable, zutatTable }, (rel) => {
+    return {
+        titelTable: {
+            rezeptTable: rel.one.rezeptTable({
+                from: rel.titelTable.rezeptId,
+                to: rel.rezeptTable.id,
+            }),
+        },
+        rezeptTable: {
+            titelTable: rel.one.titelTable(),
+            zutatTable: rel.many.zutatTable(),
+        },
+        zutatTable: {
+            rezeptTable: rel.one.rezeptTable({
+                from: rel.zutatTable.rezeptId,
+                to: rel.rezeptTable.id,
+            }),
+        },
+    };
+});

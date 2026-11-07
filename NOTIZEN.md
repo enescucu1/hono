@@ -60,14 +60,26 @@ Letzter Stand: 7.11.2026
 - [x] `node --env-file=.env src/beispiele.mts` läuft (Lesen, Pagination, Joins, Admin-Zugriff)
 - [x] `node --env-file=.env src/beispiele-write.mts` läuft (INSERT, UPDATE, DELETE). Nicht nochmal ausführen, die ISBN ist eindeutig
 
+### Rezept-Datenbank (7.11.)
+
+- [x] Dateien erzeugt und gegen einen lokalen PostgreSQL 16 getestet: `init/rezept/sql` (`create-db`, `create-schema`, `create-table`, `copy-csv`), `init/rezept/csv` (`rezept`, `titel`, `zutat`), `src/config/postgresql` (`create-table`, `copy-csv`, `drop-table`), neues `ER-Diagramm.plantuml`
+- [x] Branch `feature/rezept-db`
+- [x] `init/rezept` nur ins Volume `pg_init` kopiert und `/tablespace/rezept` angelegt. Im Volume liegen jetzt `buch`, `patient`, `rezept` und `tls` nebeneinander
+- [x] Mit `psql` angelegt: User, Datenbank und Tablespace `rezeptspace`, Schema, Enum `schwierigkeitsgrad`, Tabellen `rezept`, `titel`, `zutat`, Testdaten (`COPY 9`, `COPY 9`, `COPY 19`)
+- [ ] Noch nicht committet
+
 ## Beobachtungen und Stolpersteine
 
 - `numeric` kommt bei Drizzle als **String** zurück (`"11.10"`), für `number` ist `mode: 'number'` nötig
+- Die Testdaten der Rezept-DB sind nach `beispiele-write.mts` verändert (Rezept 30 geändert, Rezept 70 gelöscht, Rezept 1000 neu)
 - Die Warnung zu `NODE_TLS_REJECT_UNAUTHORIZED=0` kommt aus der `.env` und ist nur für die lokale Entwicklung mit dem selbst signierten Zertifikat gedacht
 - `src/config/postgresql/server.crt` und `extras/compose/postgres/init/tls/server.crt` sind identisch und gültig bis **07.02.2027**
 - In der Zip passen die Postgres-Image-Tags nicht zusammen (`compose.yml`: `postgres:19rc1-trixie`, ReadMe: `dhi.io/postgres:19.0-debian13`), im Forum nachfragen
 - `ER-Diagramm.plantuml` des Dozenten ist veraltet (`titel_id` im Buch, die SQL-Datei hat `buch_id` in `titel`)
 - Das Script `pnpm run drizzle-kit-pull` gibt es nicht, der Befehl lautet `pnpm exec drizzle-kit pull`
+- Oxlint meldet `sort-imports`: erst Imports mit mehreren Namen, dann mit einem Namen, innerhalb jeder Gruppe nach dem ersten Namen sortiert (Großbuchstaben vor Kleinbuchstaben)
+- Oxlint meldet `TS2591` (`node:process` nicht gefunden) in `drizzle.config.ts`, weil die Datei nicht im `include` der `tsconfig.json` steht und `pnpm run tsc` sie deshalb nie prüft. Lösung: `"drizzle.config.ts"` in `include` aufnehmen
+- `drizzle-kit pull` erzeugt unbrauchbare Namen (`rezeptInRezept`, `titelInRezepts`). In `relations.mts` heißt der Parameter `rel` statt `r`, weil die Oxlint-Regel `id-length` einstellige Namen verbietet (Ausnahmen nur `c`, `i`, `T`, `_`)
 - Die `.env` ist nicht im Repository. Jeder legt seine eigene an, mit eigenem Keycloak-Secret
 - Docker Desktop muss laufen, sonst meldet `docker` einen Fehler zur Verbindung mit der Docker-API
 
@@ -90,15 +102,15 @@ Letzter Stand: 7.11.2026
 
 ## Offen
 
-### Als Nächstes (Rezept-Datenbank)
+### Als Nächstes (Drizzle-Schema für Rezept)
 
-- [ ] Branch `feature/rezept-db`
-- [ ] SQL-Skripte (`create-db`, `create-schema`, `create-table`, `copy-csv`) und CSV-Dateien für Rezept, Titel und Zutat
-- [ ] Neue DB `rezept` mit User, Schema und Tablespace in Postgres anlegen
-- [ ] `drizzle.config.ts` und `.env` anpassen (`DATABASE_URL`, `schemaFilter`)
-- [ ] `pnpm exec drizzle-kit pull`, danach `schema.mts` und `relations.mts` nach `src/db` übernehmen und umbenennen (`...Schema`, `...Table`, Named Imports)
-- [ ] Beispiele (`beispiele.mts`, `beispiele-write.mts`) auf Rezept umstellen
-- [ ] ER-Diagramm in PlantUML neu schreiben (`extras/doc/projekthandbuch`)
+- [ ] Stand sichern: committen und `feature/rezept-db` pushen
+- [x] `.env` (lokal, nicht im Repo) und `drizzle.config.ts` auf `rezept` umgestellt (`DATABASE_URL`, `DATABASE_URL_ADMIN`, `schemaFilter`)
+- [x] `pnpm exec drizzle-kit pull`: 3 Tabellen, 22 Spalten, 1 Enum, 6 Indizes, 2 Foreign Keys, 3 Check-Constraints. Der Ordner `drizzle` ist in der `.gitignore`
+- [x] `schema.mts` und `relations.mts` nach `src/db` übernommen: `rezeptSchema`, `rezeptTable`, `titelTable`, `zutatTable`, `numeric` mit `mode: 'number'`, `jsonb().$type<string[]>()`, `.defaultNow()`, Named Imports mit `.mts`
+- [x] `beispiele.mts` und `beispiele-write.mts` auf Rezept umgestellt, relationale Abfrage mit `db.query` ergänzt. Verzeichnis `init/buch` aus dem Repo entfernen (`git rm -r`)
+- [x] `pnpm exec oxfmt`, `pnpm run lint` (0 Fehler) und `pnpm run tsc` (ohne Fehler)
+- [x] Beide Beispiele laufen gegen die Rezept-DB: `kosten` und `menge` kommen als `number`, die relationale Abfrage (`db.query`) liefert Rezept 20 mit Titel (`untertitel: null`) und drei Zutaten in **einer** SQL-Abfrage. `beispiele-write.mts` hat Rezept 1000 angelegt, Rezept 30 auf Version 1 geändert und Rezept 70 gelöscht (nicht nochmal ausführen)
 - [ ] Pull Request, Sai prüft
 
 ### Danach

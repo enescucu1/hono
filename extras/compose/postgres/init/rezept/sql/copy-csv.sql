@@ -13,19 +13,11 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
--- Aufruf:   psql --dbname=postgres --username=postgres --file=/init/buch/sql/create-db.sql
+-- Aufruf:   psql --dbname=rezept --username=postgres --file=/init/rezept/sql/copy-csv.sql
 
--- https://www.postgresql.org/docs/current/sql-createuser.html
--- https://www.postgresql.org/docs/current/sql-createrole.html
-CREATE USER buch PASSWORD 'p';
+SET search_path TO rezept;
 
--- https://www.postgresql.org/docs/current/sql-createdatabase.html
-CREATE DATABASE buch;
-
--- https://www.postgresql.org/docs/current/role-attributes.html
--- https://www.postgresql.org/docs/current/ddl-priv.html
--- https://www.postgresql.org/docs/current/sql-grant.html
-GRANT ALL ON DATABASE buch TO buch;
-
--- https://www.postgresql.org/docs/current/sql-createtablespace.html
-CREATE TABLESPACE buchspace OWNER buch LOCATION '/tablespace/buch';
+-- https://www.postgresql.org/docs/current/sql-copy.html
+COPY rezept FROM '/init/rezept/csv/rezept.csv' (FORMAT csv, DELIMITER ';', HEADER true);
+COPY titel FROM '/init/rezept/csv/titel.csv' (FORMAT csv, DELIMITER ';', HEADER true);
+COPY zutat FROM '/init/rezept/csv/zutat.csv' (FORMAT csv, DELIMITER ';', HEADER true);
