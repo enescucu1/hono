@@ -16,7 +16,8 @@
   "author": "Juergen Zimmermann <Juergen.Zimmermann@h-ka.de> (https://www.h-ka.de)",
   "type": "module",
   "scripts": {
-    "start": "echo Beispiel fuer Drizzle",
+    "start": "node --env-file=.env src/server.mts",
+    "dev": "node --env-file=.env --watch src/server.mts",
     "test": "echo Keine Tests",
     "clean": "node --eval=\"import fs from 'node:fs/promises'; await fs.rm('dist', { recursive: true, force: true });\"",
     "lint": "oxlint",
@@ -27,8 +28,10 @@
     "tsrs": "tsrs --pretty"
   },
   "dependencies": {
+    "@hono/node-server": "2.1.6",
     "dotenv": "18.0.9",
     "drizzle-orm": "1.0.0-rc.5",
+    "hono": "5.0.0-rc.0",
     "pg": "8.23.1"
   },
   "devDependencies": {
