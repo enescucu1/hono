@@ -81,6 +81,8 @@ Letzter Stand: 7.11.2026
 - Oxlint meldet `TS2591` (`node:process` nicht gefunden) in `drizzle.config.ts`, weil die Datei nicht im `include` der `tsconfig.json` steht und `pnpm run tsc` sie deshalb nie prüft. Lösung: `"drizzle.config.ts"` in `include` aufnehmen
 - Oxlint verbietet `process.env` (`node/no-process-env`), deshalb steht die Konfiguration als Konstanten in `src/config/*.mts` (wie bei den Beispielen mit Passwort `p` für die lokale Entwicklungs-DB)
 - Die Namen der Relationen in `relations.mts` erscheinen im JSON der REST-Schnittstelle. Deshalb heißen sie `titel` und `zutaten` (statt `titelTable` und `zutatTable`), bei `titelTable` und `zutatTable` auf der Gegenseite `rezept`
+- Drizzle akzeptiert bei `exactOptionalPropertyTypes` (`@tsconfig/strictest`) keine Filter mit dem Wert `undefined` in `where`. Deshalb kommen nur vorhandene Suchkriterien per Spread in den Filter: `...(titel === undefined ? {} : { titel: ... })`
+- Zod 4: `z.strictObject` lehnt unbekannte Parameter ab (Tippfehler), `z.stringbool()` wandelt `"true"` und `"false"` aus der Query in Booleans um, `z.flattenError` liefert die Fehler für die Antwort
 - `drizzle-kit pull` erzeugt unbrauchbare Namen (`rezeptInRezept`, `titelInRezepts`). In `relations.mts` heißt der Parameter `rel` statt `r`, weil die Oxlint-Regel `id-length` einstellige Namen verbietet (Ausnahmen nur `c`, `i`, `T`, `_`)
 - Die `.env` ist nicht im Repository. Jeder legt seine eigene an, mit eigenem Keycloak-Secret
 - Docker Desktop muss laufen, sonst meldet `docker` einen Fehler zur Verbindung mit der Docker-API
@@ -116,23 +118,35 @@ Letzter Stand: 7.11.2026
 - [x] Pull Request #1 gemergt (`main` auf `868b5c0`). Sai hat ihn noch nicht geprüft, nachträglicher Review offen
 - [x] Branch `feature/rezept-db` gelöscht (GitHub und lokal)
 
-### Als Nächstes (Hono: erste REST-Route)
+### Hono: erste REST-Route (7.11.)
 
-- [ ] Branch `feature/hono-rest` von `main`
+- [x] Branch `feature/hono-rest` von `main`
 - [ ] Im Forum bestätigen lassen: Hono 5.0.0-rc.0 (steht in `minimumReleaseAgeExclude` der `pnpm-workspace.yaml`) oder `latest` 4.13.17
-- [ ] `pnpm add hono@5.0.0-rc.0 @hono/node-server@2.1.6`
-- [x] `pnpm add hono@5.0.0-rc.0 @hono/node-server@2.1.6` lief, `pnpm run dev` startet den Server, `GET /rest/20` liefert Rezept mit Titel und drei Zutaten
-- [ ] Relationen umbenennen (`titel`, `zutaten`, `rezept`) in `relations.mts`, im Service und in `beispiele.mts`
-- [ ] Gerüst einspielen: `src/config/db.mts`, `src/config/server.mts`, `src/rezept/service/rezept-read.service.mts`, `src/rezept/rest/rezept-get.router.mts`, `src/server.mts`
-- [ ] `package.json`: Scripts `start` und `dev` (`node --env-file=.env ... src/server.mts`)
+- [x] `pnpm add hono@5.0.0-rc.0 @hono/node-server@2.1.6`
+- [x] Gerüst: `src/config/db.mts`, `src/config/server.mts`, `src/rezept/service/rezept-read.service.mts`, `src/rezept/rest/rezept-get.router.mts`, `src/server.mts`
+- [x] Relationen umbenannt (`titel`, `zutaten`, `rezept`) in `relations.mts`, im Service und in `beispiele.mts`
+- [x] `package.json`: Scripts `start` und `dev` (`node --env-file=.env ... src/server.mts`)
+- [x] `pnpm exec oxfmt`, `pnpm run lint` (0 Fehler), `pnpm run tsc`
+- [x] `pnpm run dev`, `GET http://localhost:3000/rest/20` im Browser: 200 mit `titel` und drei `zutaten`
+- [x] Commit `dfa5ac2` und Push auf `feature/hono-rest`
+- [ ] Pull Request öffnen, Sai prüft (diesmal auf die Freigabe warten), danach mergen, `main` lokal holen, Branch löschen
+
+### REST: Suche mit Query-Parametern und Zod (7.11.)
+
+- [x] Hono-Gerüst gemergt (Pull Request, `main` auf `552a3a4`), Branch gelöscht
+- [ ] Branch `feature/rest-suche` von `main`
+- [ ] `pnpm add zod@4.6.7`
+- [ ] Dateien einspielen: `suchkriterien.mts` (Zod-Schema, neu), `rezept-read.service.mts` (`find` mit Filter und Pagination), `rezept-get.router.mts` (`GET /rest`)
 - [ ] `pnpm exec oxfmt`, `pnpm run lint`, `pnpm run tsc`
-- [ ] Server starten, `GET http://localhost:3000/rest/20` im Browser oder in Bruno testen (200 mit Titel und Zutaten, 404 bei unbekannter oder ungültiger ID)
-- [ ] Commit, Pull Request, Sai prüft (diesmal auf die Freigabe warten)
+- [ ] Im Browser testen: `/rest`, `/rest?titel=suppe`, `/rest?vegetarisch=true&schwierigkeit=EINFACH`, `/rest?seite=2&groesse=3`, ungültige Parameter (422), keine Treffer (404)
+- [ ] Commit, Pull Request, Sai prüft (auf die Freigabe warten)
+
+Entscheidungen: Suche liefert 404, wenn nichts gefunden wird (wie bei `GET /rest/:id`). Ungültige oder unbekannte Parameter liefern 422 mit den Fehlern von Zod. Standardmäßig 5 Rezepte pro Seite, maximal 20, sortiert nach ID.
 
 ### Danach
 
 - [ ] Regeln in `oxlint.config.mts` ergänzen: `no-var`, `prefer-const`, `@stylistic/quotes` (single), `prefer-destructuring`. Mit `pnpm exec oxlint --rules` prüfen, ob es eine Regel gegen Enums gibt
-- [ ] Hono: weitere REST-Routen (POST, PUT, DELETE, Suche), Validierung mit Zod, ETag und Versionsprüfung, GraphQL Yoga
+- [ ] Hono: weitere REST-Routen (POST, PUT, DELETE), Validierung mit Zod, ETag und Versionsprüfung, GraphQL Yoga
 - [ ] TLS für den Appserver: `.gitignore` nennt `src/config/tls/key.pem`, Zertifikat und Schlüssel fehlen noch (Dozent oder ILIAS fragen). Bis dahin läuft der Server mit HTTP
 - [ ] OIDC und OAuth 2 mit Keycloak
 - [ ] Vitest mit Fetch API für Integrationstests

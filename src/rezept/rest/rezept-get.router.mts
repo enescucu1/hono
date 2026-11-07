@@ -13,10 +13,29 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import { find, findById } from '../service/rezept-read.service.mts';
 import { Hono } from 'hono';
-import { findById } from '../service/rezept-read.service.mts';
+import { suchkriterienSchema } from './suchkriterien.mts';
+import { z } from 'zod';
 
 export const rezeptGetRouter = new Hono();
+
+// GET /rest?titel=suppe&vegetarisch=true&seite=1&groesse=5
+rezeptGetRouter.get('/', async (c) => {
+    const kriterien = suchkriterienSchema.safeParse(c.req.query());
+    if (!kriterien.success) {
+        return c.json(
+            { message: 'Ungueltige Suchkriterien.', details: z.flattenError(kriterien.error) },
+            422,
+        );
+    }
+
+    const rezepte = await find(kriterien.data);
+    if (rezepte.length === 0) {
+        return c.json({ message: 'Keine Rezepte gefunden.' }, 404);
+    }
+    return c.json(rezepte, 200);
+});
 
 // GET /rest/:id
 rezeptGetRouter.get('/:id', async (c) => {
