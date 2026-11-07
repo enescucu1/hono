@@ -20,22 +20,21 @@
 ' hide the spot
 hide circle
 
-' evtl. Prbleme mit Kraehenfuessen vermeiden
+' evtl. Probleme mit Kraehenfuessen vermeiden
 skinparam linetype ortho
 
-entity "Buch" {
+entity "Rezept" {
   * id: integer <<generated>>
   --
   * version: integer
-  * isbn: text
-  * rating: number
-  * art: text
-  * preis: number
-  * rabatt: number
-  * lieferbar: boolean
+  * rezeptnummer: text
+  * bewertung: integer
+    schwierigkeit: text
+  * kosten: number
+  * zubereitungszeit: integer
+  * vegetarisch: boolean
     datum: date
-    homepage: text
-  * **titel_id**: integer <<FK>>
+    quelle: text
     schlagwoerter: text
   * erzeugt: timestamp
   * aktualisiert: timestamp
@@ -46,19 +45,21 @@ entity "Titel" {
   --
   * titel: text
     untertitel: text
+  * **rezept_id**: integer <<FK>>
 }
 
-entity "Abbildung" {
+entity "Zutat" {
   * id: integer <<generated>>
   --
-  * beschriftung: text
-    contentType: text
-  * **buch_id**: integer <<FK>>
+  * bezeichnung: text
+  * menge: number
+  * einheit: text
+  * **rezept_id**: integer <<FK>>
 }
 
-Buch ||..|| Titel
-Buch ||..o{ Abbildung
+Rezept ||..|| Titel
+Rezept ||..o{ Zutat
 
-footer (c) Jürgen Zimmermann
+footer (c) Jürgen Zimmermann, Enes Cubukcu, Sai Kujala
 
 @enduml

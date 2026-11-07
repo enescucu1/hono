@@ -14,17 +14,16 @@
 -- along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 -- Aufruf:
--- docker compose exec db bash
--- psql --dbname=buch --username=buch --file=/sql/drop-table.sql
+-- docker compose exec postgres bash
+-- psql --dbname=rezept --username=rezept --file=/init/rezept/sql/drop-table.sql
 
-set search_path to 'buch';
+set search_path to 'rezept';
 
 -- https://www.postgresql.org/docs/current/sql-droptable.html
 
-DROP TABLE IF EXISTS buch_file CASCADE;
-DROP TABLE IF EXISTS abbildung CASCADE;
+DROP TABLE IF EXISTS zutat CASCADE;
 DROP TABLE IF EXISTS titel CASCADE;
-DROP TABLE IF EXISTS buch CASCADE;
+DROP TABLE IF EXISTS rezept CASCADE;
 
 -- https://www.postgresql.org/docs/current/sql-droptype.html
-DROP TYPE IF EXISTS buchart;
+DROP TYPE IF EXISTS schwierigkeitsgrad;

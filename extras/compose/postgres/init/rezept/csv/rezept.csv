@@ -1,0 +1,10 @@
+id;version;rezeptnummer;bewertung;schwierigkeit;kosten;zubereitungszeit;vegetarisch;datum;quelle;schlagwoerter;erzeugt;aktualisiert
+1;0;RZ-001;5;EINFACH;6.5;25;false;2026-02-01;https://acme.it;"[""ITALIENISCH"",""PASTA""]";2026-02-01 00:00:00;2026-02-01 00:00:00
+20;0;RZ-020;4;EINFACH;3;20;true;2026-02-02;https://acme.de;"[""FRUEHSTUECK"",""SUESS""]";2026-02-02 00:00:00;2026-02-02 00:00:00
+30;0;RZ-030;3;EINFACH;4;30;true;2026-02-03;https://acme.at;"[""SUPPE"",""ITALIENISCH""]";2026-02-03 00:00:00;2026-02-03 00:00:00
+40;0;RZ-040;4;MITTEL;5.5;40;true;2026-02-04;https://acme.in;"[""CURRY"",""VEGAN""]";2026-02-04 00:00:00;2026-02-04 00:00:00
+50;0;RZ-050;5;MITTEL;9;90;false;2026-02-05;https://acme.it;"[""ITALIENISCH"",""AUFLAUF""]";2026-02-05 00:00:00;2026-02-05 00:00:00
+60;0;RZ-060;2;EINFACH;4.5;50;true;2026-02-06;https://acme.de;"[""KARTOFFEL""]";2026-02-06 00:00:00;2026-02-06 00:00:00
+70;0;RZ-070;3;SCHWER;14;150;false;2026-02-07;https://acme.de;"[""FLEISCH"",""KLASSIKER""]";2026-02-07 00:00:00;2026-02-07 00:00:00
+80;0;RZ-080;5;MITTEL;7;30;true;2026-02-08;https://acme.it;"[""DESSERT"",""ITALIENISCH""]";2026-02-08 00:00:00;2026-02-08 00:00:00
+90;0;RZ-090;1;;4;25;true;;;;2026-02-09 00:00:00;2026-02-09 00:00:00
