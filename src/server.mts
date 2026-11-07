@@ -16,10 +16,12 @@
 import { Hono } from 'hono';
 import { port } from './config/server.mts';
 import { rezeptGetRouter } from './rezept/rest/rezept-get.router.mts';
+import { rezeptWriteRouter } from './rezept/rest/rezept-write.router.mts';
 import { serve } from '@hono/node-server';
 
 const app = new Hono();
 app.route('/rest', rezeptGetRouter);
+app.route('/rest', rezeptWriteRouter);
 
 serve({ fetch: app.fetch, port }, (info) => {
     console.log(`Der Appserver laeuft auf http://localhost:${info.port}`);
