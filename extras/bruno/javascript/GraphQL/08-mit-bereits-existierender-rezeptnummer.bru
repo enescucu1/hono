@@ -1,0 +1,40 @@
+meta {
+  name: Neues Rezept mit bereits existierender Rezeptnummer
+  type: graphql
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation ($i: RezeptInput!) {
+    create(input: $i) {
+      id
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "i": {
+      "rezeptnummer": "RZ-020",
+      "bewertung": 4,
+      "kosten": 12.5,
+      "zubereitungszeit": 40,
+      "titel": { "titel": "Doppelt" },
+      "zutaten": [
+        { "bezeichnung": "Wasser", "menge": 1, "einheit": "l" }
+      ]
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.errors[0].extensions.code: eq BAD_USER_INPUT
+}
+

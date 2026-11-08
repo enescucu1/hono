@@ -1,0 +1,19 @@
+meta {
+  name: Neu angelegtes Rezept loeschen (REST)
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{baseUrl}}/rest/{{graphqlId}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Raeumt das Rezept aus `Neues Rezept (Mutation)` per REST auf, damit die Requests wiederholbar sind.
+}

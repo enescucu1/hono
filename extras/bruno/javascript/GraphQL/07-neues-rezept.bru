@@ -1,0 +1,58 @@
+meta {
+  name: Neues Rezept (Mutation)
+  type: graphql
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation ($i: RezeptInput!) {
+    create(input: $i) {
+      id
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "i": {
+      "rezeptnummer": "{{rezeptnummer}}",
+      "bewertung": 4,
+      "schwierigkeit": "MITTEL",
+      "kosten": 12.5,
+      "zubereitungszeit": 40,
+      "vegetarisch": true,
+      "titel": { "titel": "GraphQL-Suppe", "untertitel": "Aus der Mutation" },
+      "zutaten": [
+        { "bezeichnung": "Wasser", "menge": 1, "einheit": "l" }
+      ]
+    }
+  }
+}
+
+script:pre-request {
+  // zufaellige Rezeptnummer, damit der Request wiederholbar ist
+  const nummer = String(Math.floor(100000 + Math.random() * 900000));
+  bru.setVar("rezeptnummer", `RZ-${nummer}`);
+}
+
+script:post-response {
+  if (res.body.data?.create?.id) {
+    bru.setVar("graphqlId", res.body.data.create.id);
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.create.id: isNumber
+}
+
+docs {
+  Legt ein Rezept mit zufaelliger Rezeptnummer an. Die ID wird in der Variable `graphqlId`
+  gemerkt (siehe `Neu angelegtes Rezept loeschen`).
+}

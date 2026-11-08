@@ -1,0 +1,28 @@
+meta {
+  name: Vegetarisch und EINFACH
+  type: graphql
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  query {
+    rezepte(suchkriterien: { vegetarisch: true, schwierigkeit: EINFACH }) {
+      id
+      vegetarisch
+      schwierigkeit
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.rezepte[0].vegetarisch: eq true
+  res.body.data.rezepte[0].schwierigkeit: eq EINFACH
+}
+

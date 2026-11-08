@@ -52,6 +52,10 @@ export const find = async ({ titel, schwierigkeit, vegetarisch, seite, groesse }
         offset: (seite - 1) * groesse,
     });
 
+// Zutaten (1:n) eines Rezepts, z.B. fuer GraphQL, wenn das Rezept ohne Zutaten gesucht wurde
+export const findZutaten = async (rezeptId: number) =>
+    await db.query.zutatTable.findMany({ where: { rezeptId }, orderBy: { id: 'asc' } });
+
 // Gibt es schon ein Rezept mit dieser Rezeptnummer?
 export const existsRezeptnummer = async (rezeptnummer: string) =>
     (await db.query.rezeptTable.findFirst({ columns: { id: true }, where: { rezeptnummer } })) !==

@@ -1,0 +1,29 @@
+meta {
+  name: Seitengroesse 100 ist zu gross
+  type: graphql
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  query {
+    rezepte(suchkriterien: { groesse: 100 }) {
+      id
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.errors[0].extensions.code: eq BAD_USER_INPUT
+  res.body.errors[0].extensions.details.fieldErrors.groesse: isDefined
+}
+
+docs {
+  GraphQL antwortet auch bei Fehlern mit Status 200. Der Fehler steht in `errors`.
+}
