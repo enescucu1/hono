@@ -1,9 +1,9 @@
 # Notizen zur Aufgabe 3: Appserver mit Hono, TypeScript und Drizzle
 
 Gruppe 2, Enes Cubukcu und Sai Kujala. GitHub: `https://github.com/enescucu1/hono` (öffentlich).
-Zeiterfassung (nur Enes) und Projektplan (Sai und Enes) kommen in eine Excel-Datei wie bei Aufgabe 1.
+Zeiterfassung (nur Enes) und Projektplan (Sai und Enes) stehen in `SWE_Enes_Cubukcu_Zeiterfassung_Planung_Aufgabe3.xlsx` (wie bei Aufgabe 1).
 
-Letzter Stand: 7.11.2026, abends (Enes)
+Letzter Stand: 8.11.2026, abends (Enes)
 
 ## Übergabe an Sai: Vitest-Integrationstests
 
@@ -14,6 +14,8 @@ Sai macht als Nächstes die **Integrationstests mit Vitest** für die REST-Schni
 - [x] Pull Request #4 (POST) und #5 (PUT, DELETE, ETag) sind in `main` gemergt (7.11., die Konflikte in drei Dateien waren gelöst)
 - [ ] Nach `git checkout main` und `git pull` enthält `src/rezept/rest/rezept-write.router.mts` die Routen `PUT` und `DELETE` (zum Beispiel mit `Select-String "put|delete" src\rezept\rest\rezept-write.router.mts`)
 - [ ] Projekt eingerichtet (Abschnitt "Projekt einrichten") und `pnpm run dev` läuft, `http://localhost:3000/rest/20` liefert das Rezept "Pfannkuchen"
+- [ ] Nach `git pull` einmal `pnpm i` ausführen: seit dem 8.11. gibt es die neuen Pakete `graphql`, `graphql-yoga` und `nodemailer`
+- [ ] Optional: Mailpit läuft (Abschnitt "Starten und Beenden"). Ohne Mailpit steht beim Anlegen eines Rezepts ein Fehler im Log, die Antwort ist trotzdem 201
 
 ### Vorgehen
 
@@ -38,6 +40,7 @@ Sai macht als Nächstes die **Integrationstests mit Vitest** für die REST-Schni
 - Fehlerantworten haben die Form `{ "message": "...", "details": ... }`, bei 422 steht in `details` das Ergebnis von `z.flattenError`
 - `204` und `304` haben keinen Body. Header lesen mit `response.headers.get('etag')` und `response.headers.get('location')`
 - **Testdaten:** Tests, die Daten ändern (POST, PUT, DELETE), legen sich ihr Rezept selbst per `POST` an (zufällige Rezeptnummer, Format `RZ-` plus 3 bis 6 Ziffern, zum Beispiel `RZ-` plus sechs zufällige Ziffern) und räumen mit `DELETE` auf. Lesetests nutzen die Seed-Rezepte (siehe "Testdaten")
+- Beim `POST` (und bei der GraphQL-Mutation `create`) geht eine Mail an Mailpit. Die Tests prüfen die Mail nicht. Läuft Mailpit nicht, ist das für die Tests egal
 - Nicht auf Version `0` eines Seed-Rezepts prüfen: Die Version kann durch `beispiele-write.mts` oder durch Tests in Bruno schon erhöht sein
 
 ### Testfälle (Vorschlag)
@@ -79,6 +82,14 @@ DELETE:
 - [ ] `DELETE /rest/<id>`: 204, danach `GET` 404
 - [ ] Noch einmal und `DELETE /rest/abc`: jeweils 204
 
+GraphQL (optional, wenn Zeit bleibt, Vorlage ist der Bruno-Ordner `GraphQL`):
+
+- [ ] `POST /graphql` mit `{ rezept(id: 20) { id titel { titel } zutaten { bezeichnung } } }`: 200, `data.rezept.id` ist 20, drei Zutaten
+- [ ] `rezept(id: 4711)`: 200 und `data.rezept` ist `null`
+- [ ] `rezepte(suchkriterien: { vegetarisch: true, schwierigkeit: EINFACH })`: alle Treffer vegetarisch und `EINFACH`
+- [ ] `rezepte(suchkriterien: { groesse: 100 })`: 200, aber `errors[0].extensions.code` ist `BAD_USER_INPUT`
+- [ ] Mutation `create` mit gültigen Daten: `data.create.id` ist eine Zahl (danach per `DELETE /rest/<id>` aufräumen). Mit vorhandener Rezeptnummer oder ungültigen Daten: `BAD_USER_INPUT`
+
 ## Projekt einrichten (für Sai)
 
 Pfad wie bei Enes `C:\workspace\javascript\...` (nicht in einem Pfad mit Leerzeichen).
@@ -112,17 +123,37 @@ Pfad wie bei Enes `C:\workspace\javascript\...` (nicht in einem Pfad mit Leerzei
    - Wer noch keinen Postgres hat: `extras/compose/postgres/ReadMe.md` durcharbeiten und überall `buch` durch `rezept` ersetzen
 6. **Prüfen:** `pnpm run lint` und `pnpm run tsc` ohne Fehler, dann `pnpm run dev` und im Browser `http://localhost:3000/rest/20`
 
+## Starten und Beenden
+
+Reihenfolge zum Starten:
+
+1. Docker Desktop starten
+2. PostgreSQL: Enes startet ihn aus dem FastAPI-Ordner (`cd C:\workspace\python\fastapi\extras\compose\postgres`, dann `docker compose up -d`), siehe "Projekt einrichten"
+3. Mailpit (optional, nur für die Mail beim Anlegen): der Compose-Ordner `mailpit` aus Aufgabe 1 (`docker compose up -d`). Im Repository `hono` gibt es dafür noch keinen Compose-Ordner (steht unter "Offen")
+4. Appserver im Projektordner: `pnpm run dev`, warten auf `Der Appserver laeuft auf http://localhost:3000`
+
+Beenden: Appserver mit Strg+C, dann `docker compose down` in den Compose-Ordnern. Die Daten bleiben in den Volumes erhalten.
+
+Adressen:
+
+- REST: `http://localhost:3000/rest`
+- GraphQL: `http://localhost:3000/graphql` (im Browser öffnet sich GraphiQL)
+- Mailpit: Weboberfläche `http://localhost:8025`, SMTP auf Port 1025
+
 ## Stand der Arbeit
 
 ### Gemergte Pull Requests
 
-| Nr. | Inhalt |
+| Nr. oder Branch | Inhalt |
 |---|---|
 | #1 | Rezept-Datenbank (SQL, CSV, ER-Diagramm), Drizzle-Schema und Relations, Beispiele, Lint und Notizen |
 | #2 | Hono-Gerüst: `src/config`, `src/rezept/service`, `src/rezept/rest`, `src/server.mts`, `GET /rest/:id` |
 | #3 | Suche `GET /rest` mit Query-Parametern und Zod |
 | #4 | `POST /rest` mit Zod, Anlegen von Rezept, Titel und Zutaten in einer Transaktion |
 | #5 | `PUT`, `DELETE` und ETag (If-Match, If-None-Match), dazu die Übergabe-Notizen |
+| #6 | GraphQL mit Yoga (Query `rezept` und `rezepte`, Mutation `create`) und Bruno-Ordner `GraphQL` |
+| `feature/ci` | GitHub Actions: Oxfmt, Oxlint und tsc (`.github/workflows/ci.yml`) |
+| `feature/mail` | E-Mail an Mailpit nach dem Anlegen eines Rezepts (`nodemailer`) |
 
 ### REST-Schnittstelle
 
@@ -159,17 +190,44 @@ Beispiel für den Body von `POST` (bei `PUT` ohne `rezeptnummer`):
 
 Pflicht sind `rezeptnummer` (Format `RZ-123`), `bewertung` (0 bis 5), `kosten`, `zubereitungszeit` (Minuten), `titel.titel` und mindestens eine Zutat. Optional sind `schwierigkeit`, `vegetarisch` (Standard `false`), `datum`, `quelle`, `schlagwoerter` und `titel.untertitel`.
 
+### GraphQL-Schnittstelle
+
+Adresse `http://localhost:3000/graphql`, `GET` zeigt im Browser GraphiQL, `POST` führt Abfragen aus. Schema-first mit GraphQL Yoga: das Schema steht in `rezept-typedefs.mts`, die Resolver in `rezept-resolvers.mts`.
+
+| Operation | Ergebnis |
+|---|---|
+| Query `rezept(id: Int!)` | das Rezept mit Titel und Zutaten, oder `null` (kein 404) |
+| Query `rezepte(suchkriterien)` | Rezepte mit `titel`, `schwierigkeit`, `vegetarisch`, `seite` (Standard 1), `groesse` (Standard 5, maximal 20), ggf. leere Liste |
+| Mutation `create(input: RezeptInput!)` | `{ id }` des neuen Rezepts |
+
+Fehler (ungültige Suchkriterien oder Rezeptdaten, doppelte Rezeptnummer) stehen bei GraphQL in `errors` mit `extensions.code` gleich `BAD_USER_INPUT` und den Zod-Fehlern in `extensions.details`. Der HTTP-Status ist trotzdem 200. Die Validierung nutzt dasselbe Zod-Schema wie `POST /rest`. Beispiel:
+
+```graphql
+query {
+  rezept(id: 20) {
+    id
+    titel { titel }
+    zutaten { bezeichnung menge einheit }
+  }
+}
+```
+
+### E-Mail an Mailpit
+
+Nach dem Anlegen eines Rezepts (`POST /rest` und Mutation `create`) geht eine Mail "Neues Rezept: ID=..." von `Rezept Server` an `Redaktion` (`src/mail/mail.service.mts`, Konstanten in `src/config/mail.mts`). Die Mail wird erst nach dem COMMIT gesendet. Bei einem Fehler (zum Beispiel Mailpit läuft nicht) wird nur ins Log geschrieben, das Rezept bleibt gespeichert und die Antwort ist 201. Timeout 5 Sekunden.
+
 ### Bruno-Collection (extras/bruno/javascript)
 
-Collection `rezept` mit 32 Requests im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
+Collection `rezept` mit 42 Requests (32 REST und 10 GraphQL) im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
 
 - `REST > Suche mit ID`: GET mit ID 1, 20, 30, unbekannter und ungültiger ID, `If-None-Match` (304)
 - `REST > Suche mit Suchparameter`: 11 Requests (Alle, Seite 2, Titel, vegetarisch, ungültige Parameter mit 422, kein Treffer mit 404)
 - `REST > Neu anlegen`: POST mit zufälliger Rezeptnummer (wiederholbar), doppelte Nummer, ungültige Daten, unbekannte Property, kein JSON
 - `REST > Ändern`: PUT mit `If-Match`, falsche oder fehlende Version, kaputter Header, unbekannte ID, ungültige Daten, Rezeptnummer im Body
 - `REST > Löschen`: DELETE für Rezept 50, das neu angelegte Rezept und eine unbekannte ID
+- `GraphQL`: Rezept 20, unbekannte ID (`null`), alle Rezepte, Suche nach Titel, vegetarisch und `EINFACH`, zu große Seitengröße, Mutation `create` (wiederholbar), doppelte Rezeptnummer, ungültige Daten, danach `DELETE` des neuen Rezepts über REST (Variable `graphqlId`)
 
-Zusammenhang der Requests: `Vorhandene ID 30` merkt den ETag in der Variable `etag`, die PUT-Requests schicken ihn als `If-Match` und aktualisieren ihn nach Erfolg. `Neues Rezept` merkt die ID aus dem Header `Location` in `neueId` (für `Neu angelegtes Rezept löschen`) und die Rezeptnummer in `rezeptnummer` (für den Request mit doppelter Nummer). Jeder Request hat Assertions. Mit der Bruno-CLI 4.3.0 gegen die Seed-Daten geprüft: 32 von 32 Requests und 48 von 48 Assertions bestanden, auch beim zweiten Durchlauf.
+Zusammenhang der Requests: `Vorhandene ID 30` merkt den ETag in der Variable `etag`, die PUT-Requests schicken ihn als `If-Match` und aktualisieren ihn nach Erfolg. `Neues Rezept` merkt die ID aus dem Header `Location` in `neueId` (für `Neu angelegtes Rezept löschen`) und die Rezeptnummer in `rezeptnummer` (für den Request mit doppelter Nummer). Jeder Request hat Assertions. Mit der Bruno-CLI 4.3.0 gegen die Seed-Daten geprüft: 32 von 32 Requests und 48 von 48 Assertions bestanden, auch beim zweiten Durchlauf. Mit dem Ordner `GraphQL` sind es 42 von 42 Requests. Die GraphQL-Requests hat Enes zusätzlich von Hand in Bruno durchlaufen (alle grün).
 
 Die Testfälle für Vitest (siehe oben) entsprechen dieser Collection.
 
@@ -177,12 +235,15 @@ Die Testfälle für Vitest (siehe oben) entsprechen dieser Collection.
 
 ```text
 src/
-  config/db.mts, server.mts          Drizzle-Client und Port (Konstanten, kein process.env)
-  db/schema.mts, relations.mts       Tabellen und Relationen (titel, zutaten, rezept)
-  rezept/rest/                       Hono-Router und Zod-Schemas
-  rezept/service/                    Zugriff auf die DB (Lesen und Schreiben)
-  server.mts                         startet den Server
-  beispiele.mts, beispiele-write.mts Beispiele des Dozenten, auf Rezept umgestellt
+  config/db.mts, server.mts, mail.mts  Drizzle-Client, Port und Mail (Konstanten, kein process.env)
+  db/schema.mts, relations.mts         Tabellen und Relationen (titel, zutaten, rezept)
+  rezept/rest/                         Hono-Router und Zod-Schemas
+  rezept/graphql/                      GraphQL: typedefs, resolvers und Hono-Router mit Yoga
+  rezept/service/                      Zugriff auf die DB (Lesen und Schreiben)
+  mail/mail.service.mts                Mail an Mailpit mit nodemailer
+  server.mts                           startet den Server
+  beispiele.mts, beispiele-write.mts   Beispiele des Dozenten, auf Rezept umgestellt
+.github/workflows/ci.yml               GitHub Actions: fmt:check, lint, tsc
 ```
 
 ### Testdaten
@@ -201,6 +262,9 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - `PUT` ersetzt Rezept, Titel und alle Zutaten (nicht angegebene optionale Werte werden `NULL`). Die Rezeptnummer ist unveränderlich
 - Optimistische Synchronisation über die Spalte `version` mit `ETag` und `If-Match`
 - Rezept, Titel und Zutaten werden beim Anlegen und Ändern in einer Transaktion geschrieben
+- GraphQL: **Schema-first** mit `createSchema` aus `graphql-yoga` (keine zusätzliche Bibliothek), `rezept(id)` liefert `null` statt 404, Fehler als `BAD_USER_INPUT` mit HTTP-Status 200. Validierung mit denselben Zod-Schemas wie bei REST, `null`-Werte aus der Mutation werden vor der Prüfung entfernt
+- Mail: im Service nach dem COMMIT, damit REST und GraphQL sie gemeinsam nutzen. Ein Mailfehler wird nur protokolliert und verhindert das Anlegen nicht
+- CI: `pnpm/action-setup` und `actions/setup-node` lesen pnpm und Node aus `devEngines` in der `package.json`, `pnpm install --frozen-lockfile`, nur lesender Zugriff (`permissions: contents: read`)
 
 ## Regeln des Dozenten
 
@@ -255,13 +319,19 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - `c.req.json().catch(() => undefined)` verhindert einen Fehler 500 bei ungültigem JSON
 - `beispiele-write.mts` verändert Daten (Rezept 30 und 70, neues Rezept 1000) und nicht zweimal ausführen, die Rezeptnummer `RZ-100` ist eindeutig
 - Die `.env` ist nicht im Repository (jeder hat seine eigene, später mit eigenem Keycloak-Secret)
+- `nodemailer` 10.4.0 war am 8.11. erst einen Tag alt und wird von `minimumReleaseAge` abgelehnt, deshalb `nodemailer@10.3.1`. `nodemailer` 10 bringt eigene Typen mit, `@types/nodemailer` aus der `package.json` wird dadurch nicht gebraucht, stört aber nicht
+- GraphiQL ist für alle Umgebungen eingeschaltet (`graphiql: true` in `graphql.router.mts`), das soll später nur für die Entwicklung gelten
+- Bei `rezepte` werden die Zutaten pro Rezept einzeln nachgeladen (eine kleine Abfrage je Rezept, höchstens 20). Das reicht hier, kann bei Bedarf in einer Abfrage gebündelt werden
+- Die Hinweise "Agent skills awaiting approval: drizzle-kit" bei `pnpm add` können ignoriert werden
+- Der Mailpit-Compose aus Aufgabe 1 liegt nicht im Repository `hono` (dort gibt es nur `debug` und `postgres`)
 
 ## Offen
 
 ### Aktuell (Enes)
 
 - [x] Pull Request #4 und #5 gemergt
-- [ ] Bruno-Collection (`bruno-rezept.zip`) ins Repository: `extras/bruno/javascript`, danach in Bruno öffnen und prüfen
+- [x] Bruno-Collection im Repository (`extras/bruno/javascript`), GraphQL-Ordner dazu
+- [x] GraphQL mit Yoga, GitHub Actions und E-Mail an Mailpit (8.11., gemergt)
 - [ ] Mail an Herrn Zimmermann mit Repo, Beispiel und zwei Fragen (Hono-Version, Zertifikat und Schlüssel für HTTPS). Entwurf liegt vor
 
 ### Als Nächstes (Sai)
@@ -270,19 +340,17 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 
 ### Danach
 
-- [ ] GraphQL mit Yoga
 - [ ] OIDC und OAuth 2 mit Keycloak (Rollen, Token, geschützte Routen)
-- [ ] E-Mail an Mailpit bei `POST` ("Neues Rezept", wie bei Aufgabe 1 "Neuer Patient"). Ob der Dozent das verlangt, ist offen
 - [ ] TLS für den Appserver: `.gitignore` nennt `src/config/tls/key.pem`, Zertifikat und Schlüssel fehlen noch. Bis dahin läuft der Server mit HTTP
 - [ ] Regeln in `oxlint.config.mts` ergänzen: `no-var`, `prefer-const`, `@stylistic/quotes` (single), `prefer-destructuring`. Mit `pnpm exec oxlint --rules` prüfen, ob es eine Regel gegen Enums gibt
-- [ ] Bruno für GraphQL
-- [ ] Docker-Image (Dockerfile) und Docker Compose
-- [ ] GitHub Actions (Oxlint, Oxfmt)
+- [ ] Docker-Image (Dockerfile) und Docker Compose, dabei auch einen Compose-Ordner für Mailpit ins Repository
+- [ ] GitHub Actions: ergänzen um Vitest, sobald die Tests von Sai da sind (brauchen PostgreSQL und den Appserver)
+- [ ] GraphiQL nur in der Entwicklung einschalten
 - [ ] Lasttests mit Grafana k6
 - [ ] OWASP Dependency Check, `pnpm audit`, SonarQube, Pino-Logging
 - [ ] PlantUML-Diagramme und Dokumentation (AsciiDoctor)
 - [ ] `.env.example` ohne Secrets ins Repository
 - [ ] Node auf mindestens 26.13 aktualisieren, Docker-Images für Node 26.13 und Bun 1.4.4 klären
 - [ ] Zertifikat läuft am 07.02.2027 ab, vor der Abgabe prüfen
-- [ ] Projektplan (Sai und Enes) und Zeiterfassung (Enes) in Excel
+- [ ] Projektplan (Sai und Enes) und Zeiterfassung (Enes) in Excel pflegen (Zeiterfassung macht Enes am Ende jeder Arbeitssession)
 - [ ] Code-Review und Abgabe
