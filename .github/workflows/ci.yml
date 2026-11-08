@@ -1,0 +1,49 @@
+# Continuous Integration: bei jedem Push auf main und bei jedem Pull Request
+# werden Formatierung (Oxfmt), Lint (Oxlint) und Typpruefung (tsc) ausgefuehrt.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nur lesender Zugriff auf das Repository
+permissions:
+  contents: read
+
+# Bei einem neuen Push wird ein noch laufender Lauf desselben Branches abgebrochen
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruefen:
+    name: Oxfmt, Oxlint und tsc
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v7.0.1
+
+      # pnpm-Version aus devEngines.packageManager in package.json
+      - name: pnpm installieren
+        uses: pnpm/action-setup@v6.1.1
+
+      # Node-Version aus devEngines.runtime in package.json, pnpm-Store wird zwischengespeichert
+      - name: Node.js installieren
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: package.json
+          cache: pnpm
+
+      - name: Abhaengigkeiten installieren
+        run: pnpm install --frozen-lockfile
+
+      - name: Formatierung pruefen (Oxfmt)
+        run: pnpm run fmt:check
+
+      - name: Lint (Oxlint)
+        run: pnpm run lint
+
+      - name: Typpruefung (tsc)
+        run: pnpm run tsc
