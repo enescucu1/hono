@@ -16,6 +16,7 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { rezeptTable, schwierigkeitsgrad, titelTable, zutatTable } from '../../db/schema.mts';
 import { db } from '../../config/db.mts';
+import { sendNeuesRezeptMail } from '../../mail/mail.service.mts';
 
 type Schwierigkeit = (typeof schwierigkeitsgrad.enumValues)[number];
 
@@ -40,9 +41,10 @@ export type NeuesRezept = Readonly<{
 }>;
 
 // Rezept, Titel und Zutaten in einer Transaktion anlegen: COMMIT bei Erfolg, sonst ROLLBACK
+// Danach geht eine Mail an die Redaktion
 // Resultat: die generierte ID des neuen Rezepts
-export const create = async ({ titel, zutaten, schlagwoerter, ...rezept }: NeuesRezept) =>
-    await db.transaction(async (tx) => {
+export const create = async ({ titel, zutaten, schlagwoerter, ...rezept }: NeuesRezept) => {
+    const id = await db.transaction(async (tx) => {
         const [rezeptInsert] = await tx
             .insert(rezeptTable)
             .values({
@@ -63,6 +65,11 @@ export const create = async ({ titel, zutaten, schlagwoerter, ...rezept }: Neues
         await tx.insert(zutatTable).values(zutatenInsert);
         return rezeptId;
     });
+
+    // Die Mail erst nach dem COMMIT: bei einem Rollback gibt es keine Mail
+    await sendNeuesRezeptMail({ id, rezeptnummer: rezept.rezeptnummer, titel: titel.titel });
+    return id;
+};
 
 // Rezept ohne Rezeptnummer: alle Properties werden ersetzt
 export type GeaendertesRezept = Omit<NeuesRezept, 'rezeptnummer'>;
