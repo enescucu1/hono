@@ -1,0 +1,26 @@
+meta {
+  name: Titel enthaelt suppe
+  type: graphql
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  query {
+    rezepte(suchkriterien: { titel: "suppe" }) {
+      id
+      titel { titel }
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.rezepte.length: gte 1
+}
+

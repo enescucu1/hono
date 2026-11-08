@@ -1,0 +1,32 @@
+meta {
+  name: Rezept 20
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  query {
+    rezept(id: 20) {
+      id
+      version
+      rezeptnummer
+      schwierigkeit
+      titel { titel untertitel }
+      zutaten { bezeichnung menge einheit }
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.rezept.id: eq 20
+  res.body.data.rezept.titel.titel: eq Pfannkuchen
+  res.body.data.rezept.zutaten.length: eq 3
+}
+

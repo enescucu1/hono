@@ -1,0 +1,39 @@
+meta {
+  name: Neues Rezept mit ungueltigen Daten
+  type: graphql
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation ($i: RezeptInput!) {
+    create(input: $i) {
+      id
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "i": {
+      "rezeptnummer": "XY-1",
+      "bewertung": 9,
+      "kosten": 1,
+      "zubereitungszeit": 3,
+      "titel": { "titel": "A" },
+      "zutaten": []
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.errors[0].extensions.code: eq BAD_USER_INPUT
+  res.body.errors[0].extensions.details.fieldErrors.bewertung: isDefined
+}
+

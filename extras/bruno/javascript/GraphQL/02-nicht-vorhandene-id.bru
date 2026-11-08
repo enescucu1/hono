@@ -1,0 +1,28 @@
+meta {
+  name: Nicht vorhandene ID
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  query {
+    rezept(id: 4711) {
+      id
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.rezept: isNull
+}
+
+docs {
+  Bei GraphQL gibt es kein 404: Das Rezept ist null.
+}

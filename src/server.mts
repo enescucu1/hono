@@ -14,6 +14,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import { Hono } from 'hono';
+import { graphqlRouter } from './rezept/graphql/graphql.router.mts';
 import { port } from './config/server.mts';
 import { rezeptGetRouter } from './rezept/rest/rezept-get.router.mts';
 import { rezeptWriteRouter } from './rezept/rest/rezept-write.router.mts';
@@ -22,6 +23,7 @@ import { serve } from '@hono/node-server';
 const app = new Hono();
 app.route('/rest', rezeptGetRouter);
 app.route('/rest', rezeptWriteRouter);
+app.route('/graphql', graphqlRouter);
 
 serve({ fetch: app.fetch, port }, (info) => {
     console.log(`Der Appserver laeuft auf http://localhost:${info.port}`);
