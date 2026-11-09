@@ -16,6 +16,7 @@
 // oxlint-disable-next-line import/no-unassigned-import
 import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
+// @ts-expect-error Datei nicht im Verzeichnis src
 import process from 'node:process';
 
 const { DATABASE_URL } = process.env;
