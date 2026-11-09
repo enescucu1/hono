@@ -1,0 +1,15 @@
+# Konfiguration des Appservers. Werte, die hier fehlen, haben Standardwerte in config.mts.
+# Geheimnisse (z.B. spaeter das Keycloak-Secret) kommen in die Datei .env und nicht hierher.
+
+[server]
+host = "localhost"
+# Bruno nutzt HTTP 1.1
+allowHTTP1 = true
+
+[db]
+host = "localhost"
+password = "p"
+
+[mail]
+host = "localhost"
+port = 1025

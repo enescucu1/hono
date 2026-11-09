@@ -15,13 +15,14 @@
 
 import { createSchema, createYoga } from 'graphql-yoga';
 import { Hono } from 'hono';
+import { paths } from '../../config/paths.mts';
 import { resolvers } from './rezept-resolvers.mts';
 import { typeDefs } from './rezept-typedefs.mts';
 
 const schema = createSchema({ typeDefs, resolvers });
 
 // graphiql: Web-Oberflaeche im Browser, nur fuer die Entwicklung
-const yoga = createYoga({ schema, graphqlEndpoint: '/graphql', graphiql: true });
+const yoga = createYoga({ schema, graphqlEndpoint: paths.graphql, graphiql: true });
 
 export const graphqlRouter = new Hono();
 

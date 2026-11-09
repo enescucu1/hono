@@ -13,18 +13,50 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import { Hono } from 'hono';
-import { graphqlRouter } from './rezept/graphql/graphql.router.mts';
-import { port } from './config/server.mts';
-import { rezeptGetRouter } from './rezept/rest/rezept-get.router.mts';
-import { rezeptWriteRouter } from './rezept/rest/rezept-write.router.mts';
+import { app } from './app.mts';
+import { createSecureServer } from 'node:http2';
+import { disconnectDB } from './config/db.mts';
+import { getConfig } from './config/config.mts';
+import process from 'node:process';
+import { readFile } from 'node:fs/promises';
 import { serve } from '@hono/node-server';
 
-const app = new Hono();
-app.route('/rest', rezeptGetRouter);
-app.route('/rest', rezeptWriteRouter);
-app.route('/graphql', graphqlRouter);
+// "Top-level await"
+const config = await getConfig();
+const { allowHTTP1, certFile, keyFile, port } = config.server;
 
-serve({ fetch: app.fetch, port }, (info) => {
-    console.log(`Der Appserver laeuft auf http://localhost:${info.port}`);
+// privater Schluessel und Zertifikat fuer TLS (selbst-signiert, nur fuer die Entwicklung)
+const key = await readFile(keyFile, { encoding: 'utf8' });
+const cert = await readFile(certFile, { encoding: 'utf8' });
+
+// HTTP/2 mit TLS 1.3, allowHTTP1 wegen Bruno (nur HTTP 1.1)
+const server = serve(
+    {
+        fetch: app.fetch,
+        port,
+        createServer: createSecureServer,
+        serverOptions: {
+            key,
+            cert,
+            minVersion: 'TLSv1.3',
+            maxVersion: 'TLSv1.3',
+            allowHTTP1,
+        },
+    },
+    (info) => {
+        console.log(`Der Appserver laeuft auf https://localhost:${info.port}`);
+    },
+);
+
+// Strg+C: keine neuen Requests mehr, DB-Verbindungen schliessen
+process.on('SIGINT', () => {
+    console.log('Der Server wird heruntergefahren.');
+    server.close();
+    (async () => {
+        try {
+            await disconnectDB();
+        } catch {
+            console.log('Fehler beim Trennen der DB-Verbindung.');
+        }
+    })();
 });
