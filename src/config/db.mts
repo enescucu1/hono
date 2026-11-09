@@ -15,8 +15,11 @@
 
 import { configURL, getConfig } from './config.mts';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { getLogger } from '../logger/logger.mts';
 import { readFile } from 'node:fs/promises';
 import { relations } from '../db/relations.mts';
+
+const logger = getLogger('db');
 
 const config = await getConfig();
 const {
@@ -61,5 +64,5 @@ export const db = drizzle({
 // DB-Verbindungen des Pools beim Beenden des Servers schliessen
 export const disconnectDB = async () => {
     await db.$client.end();
-    console.log('Die DB-Verbindung ist getrennt.');
+    logger.info('Die DB-Verbindung ist getrennt.');
 };

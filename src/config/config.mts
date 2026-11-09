@@ -33,6 +33,11 @@ const nodeEnvs = ['production', 'test', 'development'] as const;
 const nodeEnvEnv = process.env['NODE_ENV'];
 const nodeEnvDefault = nodeEnvs.find((nodeEnv) => nodeEnv === nodeEnvEnv) ?? 'production';
 
+// https://getpino.io
+const logLevels = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
+const logLevelEnv = process.env['LOG_LEVEL'];
+const logLevelDefault = logLevels.find((level) => level === logLevelEnv) ?? 'info';
+
 const maxPort = 65_535;
 const standardPort = 3000;
 const smtpPort = 1025;
@@ -70,6 +75,13 @@ const ConfigSchema = z.object({
         port: z.number().int().min(1).max(maxPort).default(smtpPort),
         from: z.string().default('Rezept Server <rezept@acme.com>'),
         to: z.string().default('Redaktion <redaktion@acme.com>'),
+    }),
+
+    log: z.object({
+        dir: z.string().default('./log'),
+        file: z.string().default('server.log'),
+        level: z.enum(logLevels).default(logLevelDefault),
+        pretty: z.boolean().default(false),
     }),
 });
 
