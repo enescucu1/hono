@@ -17,9 +17,12 @@ import { app } from './app.mts';
 import { createSecureServer } from 'node:http2';
 import { disconnectDB } from './config/db.mts';
 import { getConfig } from './config/config.mts';
+import { getLogger } from './logger/logger.mts';
 import process from 'node:process';
 import { readFile } from 'node:fs/promises';
 import { serve } from '@hono/node-server';
+
+const logger = getLogger('server');
 
 // "Top-level await"
 const config = await getConfig();
@@ -44,19 +47,19 @@ const server = serve(
         },
     },
     (info) => {
-        console.log(`Der Appserver laeuft auf https://localhost:${info.port}`);
+        logger.info(`Der Appserver laeuft auf https://localhost:${info.port}`);
     },
 );
 
 // Strg+C: keine neuen Requests mehr, DB-Verbindungen schliessen
 process.on('SIGINT', () => {
-    console.log('Der Server wird heruntergefahren.');
+    logger.info('Der Server wird heruntergefahren.');
     server.close();
     (async () => {
         try {
             await disconnectDB();
         } catch {
-            console.log('Fehler beim Trennen der DB-Verbindung.');
+            logger.error('Fehler beim Trennen der DB-Verbindung.');
         }
     })();
 });

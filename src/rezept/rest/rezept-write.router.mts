@@ -17,6 +17,7 @@ import { create, deleteById, update } from '../service/rezept-write.service.mts'
 import { geaendertesRezeptSchema, neuesRezeptSchema } from './rezept-schema.mts';
 import { Hono } from 'hono';
 import { existsRezeptnummer } from '../service/rezept-read.service.mts';
+import { parseVersion } from './etag.mts';
 import { z } from 'zod';
 
 export const rezeptWriteRouter = new Hono();
@@ -42,9 +43,6 @@ rezeptWriteRouter.post('/', async (c) => {
     return c.body(null, 201, { Location: `${new URL(c.req.url).origin}/rest/${id}` });
 });
 
-// If-Match: "<Versionsnummer>", z.B. "0" (ETag aus der Antwort auf GET /rest/:id)
-const versionPattern = /^"(?<version>\d+)"$/u;
-
 // PUT /rest/:id
 rezeptWriteRouter.put('/:id', async (c) => {
     const id = Number(c.req.param('id'));
@@ -56,8 +54,9 @@ rezeptWriteRouter.put('/:id', async (c) => {
     if (ifMatch === undefined) {
         return c.json({ message: 'Der Header If-Match mit der Version fehlt.' }, 428);
     }
-    const versionText = versionPattern.exec(ifMatch)?.groups?.['version'];
-    if (versionText === undefined) {
+    // If-Match: "<Versionsnummer>", z.B. "0" (ETag aus der Antwort auf GET /rest/:id)
+    const version = parseVersion(ifMatch);
+    if (version === undefined) {
         return c.json({ message: 'Der Header If-Match muss die Form "0" haben.' }, 412);
     }
 
@@ -70,7 +69,7 @@ rezeptWriteRouter.put('/:id', async (c) => {
         );
     }
 
-    const result = await update(id, Number(versionText), rezept.data);
+    const result = await update(id, version, rezept.data);
     switch (result.status) {
         case 'not-found': {
             return c.json({ message: `Kein Rezept mit der ID ${id} gefunden.` }, 404);

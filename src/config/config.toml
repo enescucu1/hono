@@ -13,3 +13,10 @@ password = "p"
 [mail]
 host = "localhost"
 port = 1025
+
+[log]
+dir = "./log"
+# Log-Level: fatal, error, warn, info, debug, trace
+level = "debug"
+# lesbare Ausgabe in der Konsole (zusaetzlich zur Log-Datei)
+pretty = true

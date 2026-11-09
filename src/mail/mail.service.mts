@@ -15,6 +15,9 @@
 
 import { createTransport } from 'nodemailer';
 import { getConfig } from '../config/config.mts';
+import { getLogger } from '../logger/logger.mts';
+
+const logger = getLogger('mail-service');
 
 const config = await getConfig();
 const { enabled, from, host, port, to } = config.mail;
@@ -39,7 +42,7 @@ export type NeuesRezeptMail = Readonly<{ id: number; rezeptnummer: string; titel
 // Ein Fehler beim Senden wird nur protokolliert: das Rezept ist ja schon in der DB gespeichert
 export const sendNeuesRezeptMail = async ({ id, rezeptnummer, titel }: NeuesRezeptMail) => {
     if (!enabled) {
-        console.warn('Mail deaktiviert');
+        logger.warn('Mail deaktiviert');
         return;
     }
 
@@ -51,6 +54,9 @@ export const sendNeuesRezeptMail = async ({ id, rezeptnummer, titel }: NeuesReze
             text: `Das Rezept ${rezeptnummer} mit dem Titel "${titel}" wurde angelegt.`,
         });
     } catch (error: unknown) {
-        console.error(`Die Mail zum neuen Rezept ${id} konnte nicht gesendet werden:`, error);
+        logger.error(
+            `Die Mail zum neuen Rezept ${id} konnte nicht gesendet werden: %o`,
+            error as object,
+        );
     }
 };

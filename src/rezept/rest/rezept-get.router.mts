@@ -15,6 +15,7 @@
 
 import { find, findById } from '../service/rezept-read.service.mts';
 import { Hono } from 'hono';
+import { parseVersion } from './etag.mts';
 import { suchkriterienSchema } from './suchkriterien.mts';
 import { z } from 'zod';
 
@@ -50,9 +51,9 @@ rezeptGetRouter.get('/:id', async (c) => {
     }
 
     // ETag: Versionsnummer in Anfuehrungszeichen, z.B. "0"
-    const etag = `"${rezept.version}"`;
-    if (c.req.header('If-None-Match') === etag) {
+    // If-None-Match ist auch mit einem schwachen ETag (W/"0") gleich, siehe etag.mts
+    if (parseVersion(c.req.header('If-None-Match')) === rezept.version) {
         return c.body(null, 304);
     }
-    return c.json(rezept, 200, { ETag: etag });
+    return c.json(rezept, 200, { ETag: `"${rezept.version}"` });
 });
