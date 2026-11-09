@@ -13,29 +13,53 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import { configURL, getConfig } from './config.mts';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { readFile } from 'node:fs/promises';
 import { relations } from '../db/relations.mts';
 
-// Drizzle-Client mit DB-User "rezept"
+const config = await getConfig();
+const {
+    user,
+    database,
+    password,
+    host,
+    cert,
+    tlsMinVersion,
+    tlsMaxVersion,
+    poolMax,
+    poolIdleTimeoutMillis,
+    poolConnectionTimeoutMillis,
+} = config.db;
+const { nodeEnv } = config.server;
+
+// Drizzle-Client mit dem DB-User aus config.toml (Standard: "rezept")
 export const db = drizzle({
     connection: {
-        user: 'rezept',
-        database: 'rezept',
-        password: 'p',
-        host: 'localhost',
+        user,
+        database,
+        password,
+        host,
         ssl: {
-            cert: await readFile(new URL('postgresql/server.crt', import.meta.url)),
-            minVersion: 'TLSv1.3',
-            maxVersion: 'TLSv1.3',
+            // cert ist relativ zum Verzeichnis "src"
+            cert: await readFile(new URL(cert, new URL('..', configURL))),
+            minVersion: tlsMinVersion,
+            maxVersion: tlsMaxVersion,
         },
         sslnegotiation: 'direct',
         // Connection Pool
-        max: 10,
-        idleTimeoutMillis: 30_000, // Timeout, wie lange eine Verbindung inaktive ist, bevor sie geschlossen wird
-        connectionTimeoutMillis: 5_000, // Timeout fuer Aufbau der DB-Verbindung
+        max: poolMax,
+        idleTimeoutMillis: poolIdleTimeoutMillis, // Timeout, wie lange eine Verbindung inaktiv ist, bevor sie geschlossen wird
+        connectionTimeoutMillis: poolConnectionTimeoutMillis, // Timeout fuer Aufbau der DB-Verbindung
     },
     // fuer die relationalen Abfragen mit "db.query"
     relations,
-    logger: true,
+    // SQL-Logging nur in der Entwicklung
+    logger: nodeEnv === 'development',
 });
+
+// DB-Verbindungen des Pools beim Beenden des Servers schliessen
+export const disconnectDB = async () => {
+    await db.$client.end();
+    console.log('Die DB-Verbindung ist getrennt.');
+};

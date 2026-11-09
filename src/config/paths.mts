@@ -13,5 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-// Port fuer den Appserver
-export const port = 3000;
+export const paths = {
+    rest: '/rest',
+    graphql: '/graphql',
+} as const;

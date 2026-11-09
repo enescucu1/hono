@@ -13,13 +13,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import { absender, empfaenger, mailTimeout, smtpHost, smtpPort } from '../config/mail.mts';
 import { createTransport } from 'nodemailer';
+import { getConfig } from '../config/config.mts';
+
+const config = await getConfig();
+const { enabled, from, host, port, to } = config.mail;
+
+// Timeout in Millisekunden, damit ein nicht erreichbarer Mailserver das Anlegen nicht blockiert
+const mailTimeout = 5000;
 
 // ignoreTLS: Mailpit hat keinen TLS-Zugang auf Port 1025
 const transporter = createTransport({
-    host: smtpHost,
-    port: smtpPort,
+    host,
+    port,
     secure: false,
     ignoreTLS: true,
     connectionTimeout: mailTimeout,
@@ -32,10 +38,15 @@ export type NeuesRezeptMail = Readonly<{ id: number; rezeptnummer: string; titel
 // Mail an die Redaktion, dass ein Rezept angelegt wurde
 // Ein Fehler beim Senden wird nur protokolliert: das Rezept ist ja schon in der DB gespeichert
 export const sendNeuesRezeptMail = async ({ id, rezeptnummer, titel }: NeuesRezeptMail) => {
+    if (!enabled) {
+        console.warn('Mail deaktiviert');
+        return;
+    }
+
     try {
         await transporter.sendMail({
-            from: absender,
-            to: empfaenger,
+            from,
+            to,
             subject: `Neues Rezept: ID=${id}`,
             text: `Das Rezept ${rezeptnummer} mit dem Titel "${titel}" wurde angelegt.`,
         });

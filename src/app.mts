@@ -13,12 +13,15 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-// Mailpit: SMTP-Server ohne TLS auf Port 1025 (Weboberflaeche: http://localhost:8025)
-export const smtpHost = 'localhost';
-export const smtpPort = 1025;
+import { Hono } from 'hono';
+import { graphqlRouter } from './rezept/graphql/graphql.router.mts';
+import { paths } from './config/paths.mts';
+import { rezeptGetRouter } from './rezept/rest/rezept-get.router.mts';
+import { rezeptWriteRouter } from './rezept/rest/rezept-write.router.mts';
 
-export const absender = 'Rezept Server <rezept@acme.com>';
-export const empfaenger = 'Redaktion <redaktion@acme.com>';
+// Web-Applikation mit Hono: Routen fuer REST und GraphQL
+export const app = new Hono();
 
-// Timeout in Millisekunden, damit ein nicht erreichbarer Mailserver das Anlegen nicht blockiert
-export const mailTimeout = 5000;
+app.route(paths.rest, rezeptGetRouter);
+app.route(paths.rest, rezeptWriteRouter);
+app.route(paths.graphql, graphqlRouter);
