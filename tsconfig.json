@@ -9,7 +9,7 @@
     "@tsconfig/node26/tsconfig",
     "@tsconfig/node-ts"
   ],
-  "include": ["src/**/*", "test/**/*", "scripts/*", "drizzle.config.ts"],
+  "include": ["src/**/*", "test/**/*", "scripts/*"],
   "compilerOptions": {
     // uebersetzter JS-Code im Hinblick auf Module. "nodenext" erfordert dasselbe fuer "moduleResolution"
     "module": "nodenext",
