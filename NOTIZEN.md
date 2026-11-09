@@ -3,7 +3,7 @@
 Gruppe 2, Enes Cubukcu und Sai Kujala. GitHub: `https://github.com/enescucu1/hono` (öffentlich).
 Zeiterfassung (nur Enes) und Projektplan (Sai und Enes) stehen in `SWE_Enes_Cubukcu_Zeiterfassung_Planung_Aufgabe3.xlsx` (wie bei Aufgabe 1).
 
-Letzter Stand: 8.11.2026, abends (Enes)
+Letzter Stand: 9.11.2026, abends (Enes)
 
 ## Übergabe an Sai: Vitest-Integrationstests
 
@@ -13,17 +13,18 @@ Sai macht als Nächstes die **Integrationstests mit Vitest** für die REST-Schni
 
 - [x] Pull Request #4 (POST) und #5 (PUT, DELETE, ETag) sind in `main` gemergt (7.11., die Konflikte in drei Dateien waren gelöst)
 - [ ] Nach `git checkout main` und `git pull` enthält `src/rezept/rest/rezept-write.router.mts` die Routen `PUT` und `DELETE` (zum Beispiel mit `Select-String "put|delete" src\rezept\rest\rezept-write.router.mts`)
-- [ ] Projekt eingerichtet (Abschnitt "Projekt einrichten") und `pnpm run dev` läuft, `http://localhost:3000/rest/20` liefert das Rezept "Pfannkuchen"
-- [ ] Nach `git pull` einmal `pnpm i` ausführen: seit dem 8.11. gibt es die neuen Pakete `graphql`, `graphql-yoga` und `nodemailer`
+- [ ] Projekt eingerichtet (Abschnitt "Projekt einrichten") und `pnpm run dev` läuft, `https://localhost:3000/rest/20` liefert das Rezept "Pfannkuchen" (HTTPS, die Zertifikatswarnung im Browser bestätigen)
+- [ ] Nach `git pull` einmal `pnpm i` ausführen: seit dem 8.11. gibt es die neuen Pakete `graphql`, `graphql-yoga`, `nodemailer`, `c12`, `pino` und `pino-pretty`
+- [ ] Den privaten Schlüssel `key.pem` aus der `hono.zip` des Dozenten nach `src/config/tls/key.pem` kopieren. Er steht in der `.gitignore` und ist nicht im Repository. Ohne ihn startet der Server nicht
 - [ ] Optional: Mailpit läuft (Abschnitt "Starten und Beenden"). Ohne Mailpit steht beim Anlegen eines Rezepts ein Fehler im Log, die Antwort ist trotzdem 201
 
 ### Vorgehen
 
 1. Branch `feature/vitest-integration` von `main`
-2. Vitest installieren: erst mit `pnpm view vitest version` die aktuelle Version ansehen (am 7.11. war `latest` 5.1.0), dann `pnpm add -D vitest@<Version>`. Ob diese Version mit Node 26 und TypeScript 7.1 beta läuft, ist **nicht geprüft**
-3. Konfiguration `vitest.config.mts` im Wurzelverzeichnis. Vitest verlangt dort einen Default-Export, deshalb wie bei `drizzle.config.ts` die Zeile `// oxlint-disable-next-line import/no-default-export` davor. Datei in `include` der `tsconfig.json` aufnehmen, sonst meldet Oxlint wie bei `drizzle.config.ts` den Fehler `TS2591`
+2. Vitest installieren: erst mit `pnpm view vitest version` die aktuelle Version ansehen (am 7.11. war `latest` 5.1.0), dann `pnpm add -D vitest@<Version>`. Die `hono.zip` des Dozenten nutzt `vitest` 5.1.0 mit `@vitest/ui` und `@vitest/coverage-istanbul` 5.1.0, `axios` 1.21.0 und `vite` 8.3.6, das läuft dort mit Node 26 und TypeScript 7.1 beta
+3. Konfiguration `vitest.config.mts` im Wurzelverzeichnis, Vorlage ist die Datei aus der `hono.zip` (sie setzt auch `NODE_TLS_REJECT_UNAUTHORIZED=0` für das selbst-signierte Zertifikat). Vitest verlangt dort einen Default-Export, deshalb die Zeile `// oxlint-disable-next-line import/no-default-export` davor. Ob die Datei in die `include`-Liste der `tsconfig.json` gehört, zeigt `pnpm run tsc`. In der `hono.zip` steht sie dort nicht und `drizzle.config.ts` steht jetzt in `ignorePatterns` von Oxlint
 4. In der `package.json` das Script `test` ersetzen (steht dort noch `echo Keine Tests`), zum Beispiel durch `vitest run`
-5. Testdateien in `test/integration/rezept/` (so sieht es der Override in `oxlint.config.mts` vor: `test/integration/*/*.test.mts`), zum Beispiel `rest-get.test.mts` und `rest-write.test.mts`
+5. Testdateien wie in der `hono.zip` in `test/integration/rest/` (und `test/integration/graphql/`), passend zum Override in `oxlint.config.mts` (`test/integration/*/*.test.mts`), zum Beispiel `GET-id.test.mts`, `GET-queryparam.test.mts`, `POST.test.mts`, `PUT.test.mts` und `DELETE.test.mts`. Vorlage sind die gleichnamigen Tests des Dozenten für Buch
 6. Wie üblich: `pnpm exec oxfmt`, `pnpm run lint`, `pnpm run tsc`, dann Commit, Pull Request, Enes mergt
 
 ### Regeln für die Tests (aus `oxlint.config.mts`)
@@ -36,7 +37,10 @@ Sai macht als Nächstes die **Integrationstests mit Vitest** für die REST-Schni
 
 ### Wie die Tests ablaufen sollen
 
-- Die Tests rufen mit der Fetch API (`fetch`, in Node 26 eingebaut) den **laufenden** Server auf `http://localhost:3000` auf. Voraussetzung: PostgreSQL und `pnpm run dev` laufen (wie bei Aufgabe 1: Backend und Appserver laufen, dann `pnpm test`)
+- Die Tests rufen den **laufenden** Server auf `https://localhost:3000` auf. Voraussetzung: PostgreSQL und `pnpm run dev` laufen (wie bei Aufgabe 1: Backend und Appserver laufen, dann `pnpm test`). Das Zertifikat ist selbst-signiert, deshalb `NODE_TLS_REJECT_UNAUTHORIZED=0` (steht in der `.env` und in der `vitest.config.mts` des Dozenten)
+- Der Server erlaubt HTTP/1.1 und HTTP/2. Der Dozent testet mit `axios` und `httpVersion: 2`, die Fetch API (`fetch`, in Node eingebaut) geht auch, spricht aber nur HTTP 1.1
+- Antworten sind komprimiert (gzip), der ETag ist dann schwach (`W/"0"`). Der Server akzeptiert das bei `If-Match` und `If-None-Match`, die Tests dürfen den ETag aus dem Header unverändert zurückschicken
+- Das Neuladen der DB über `/dev/db_populate` und das Token von Keycloak (wie in `setup.global.mts` der `hono.zip`) gibt es bei uns **noch nicht**. Bis dahin nur die Seed-Daten lesen und mit eigenen Rezepten arbeiten (siehe unten)
 - Fehlerantworten haben die Form `{ "message": "...", "details": ... }`, bei 422 steht in `details` das Ergebnis von `z.flattenError`
 - `204` und `304` haben keinen Body. Header lesen mit `response.headers.get('etag')` und `response.headers.get('location')`
 - **Testdaten:** Tests, die Daten ändern (POST, PUT, DELETE), legen sich ihr Rezept selbst per `POST` an (zufällige Rezeptnummer, Format `RZ-` plus 3 bis 6 Ziffern, zum Beispiel `RZ-` plus sechs zufällige Ziffern) und räumen mit `DELETE` auf. Lesetests nutzen die Seed-Rezepte (siehe "Testdaten")
@@ -100,7 +104,7 @@ Pfad wie bei Enes `C:\workspace\javascript\...` (nicht in einem Pfad mit Leerzei
 4. **`.env` anlegen** (nicht im Repository, jeder hat seine eigene). Inhalt nach dem Vorbild von `ReadMe.drizzle.md` und `ReadMe.vscode.md`:
    - `NODE_ENV=development`
    - `NODE_TLS_REJECT_UNAUTHORIZED=0`
-   - `DATABASE_URL` und `DATABASE_URL_ADMIN` für die Datenbank `rezept` mit Schema `rezept`, User `rezept` bzw. `postgres`, `sslnegotiation=direct` und `sslcert=src/config/postgresql/server.crt`. Das Passwort des Users `rezept` steht in `extras/compose/postgres/init/rezept/sql/create-db.sql`
+   - `DATABASE_URL` und `DATABASE_URL_ADMIN` (nur noch für `drizzle-kit`, der Appserver liest die DB-Daten aus `src/config/config.toml`) für die Datenbank `rezept` mit Schema `rezept`, User `rezept` bzw. `postgres`, `sslnegotiation=direct` und `sslcert=src/config/postgresql/server.crt`. Das Passwort des Users `rezept` steht in `extras/compose/postgres/init/rezept/sql/create-db.sql`
 5. **PostgreSQL mit der Datenbank `rezept`:**
    - Wer PostgreSQL aus Aufgabe 1 schon hat (Volumes `pg_data`, `pg_init`, `pg_tablespace`), baut **keinen** zweiten Container auf (gleicher Containername und Port 5432). Nur `init/rezept` ins Volume `pg_init` kopieren und das Verzeichnis `/tablespace/rezept` anlegen. Dafür im Ordner `extras\compose\postgres` den folgenden Befehl ausführen und `<Image>` durch ein lokal vorhandenes Postgres-Image ersetzen (Enes: `postgres:19beta4-trixie`):
 
@@ -121,7 +125,8 @@ Pfad wie bei Enes `C:\workspace\javascript\...` (nicht in einem Pfad mit Leerzei
 
      Erwartet: `COPY 9`, `COPY 9`, `COPY 19`
    - Wer noch keinen Postgres hat: `extras/compose/postgres/ReadMe.md` durcharbeiten und überall `buch` durch `rezept` ersetzen
-6. **Prüfen:** `pnpm run lint` und `pnpm run tsc` ohne Fehler, dann `pnpm run dev` und im Browser `http://localhost:3000/rest/20`
+6. **Schlüssel für HTTPS:** `key.pem` aus der `hono.zip` des Dozenten (`src/config/tls/key.pem`) in das Verzeichnis `src/config/tls` des Projekts kopieren. Das Zertifikat `certificate.crt` liegt schon im Repository
+7. **Prüfen:** `pnpm run lint` und `pnpm run tsc` ohne Fehler, dann `pnpm run dev` und im Browser `https://localhost:3000/rest/20` (die Zertifikatswarnung bestätigen)
 
 ## Starten und Beenden
 
@@ -130,15 +135,39 @@ Reihenfolge zum Starten:
 1. Docker Desktop starten
 2. PostgreSQL: Enes startet ihn aus dem FastAPI-Ordner (`cd C:\workspace\python\fastapi\extras\compose\postgres`, dann `docker compose up -d`), siehe "Projekt einrichten"
 3. Mailpit (optional, nur für die Mail beim Anlegen): der Compose-Ordner `mailpit` aus Aufgabe 1 (`docker compose up -d`). Im Repository `hono` gibt es dafür noch keinen Compose-Ordner (steht unter "Offen")
-4. Appserver im Projektordner: `pnpm run dev`, warten auf `Der Appserver laeuft auf http://localhost:3000`
+4. Appserver im Projektordner: `pnpm run dev`, warten auf `Der Appserver laeuft auf https://localhost:3000`. Das Log steht in der Konsole und in `log/server.log` (nicht im Repository)
 
 Beenden: Appserver mit Strg+C, dann `docker compose down` in den Compose-Ordnern. Die Daten bleiben in den Volumes erhalten.
 
 Adressen:
 
-- REST: `http://localhost:3000/rest`
-- GraphQL: `http://localhost:3000/graphql` (im Browser öffnet sich GraphiQL)
+- REST: `https://localhost:3000/rest` (HTTPS mit selbst-signiertem Zertifikat, in Bruno ist die SSL-Prüfung aus)
+- GraphQL: `https://localhost:3000/graphql` (im Browser öffnet sich GraphiQL)
 - Mailpit: Weboberfläche `http://localhost:8025`, SMTP auf Port 1025
+
+## Beispiele des Dozenten (hono.zip und drizzle.zip vom 9.11.)
+
+Der Dozent hat im ILIAS-Ordner "Beispiele" eine **komplette Beispielanwendung** (`hono.zip`, Buch) und eine aktualisierte `drizzle.zip` hochgeladen. Wir bauen weiter in unserem Repository und holen uns die fehlenden Teile Schritt für Schritt hinein, in der Reihenfolge der `VORGEHENSWEISE.md` aus der `hono.zip`. Beantwortet sind damit unsere zwei offenen Fragen: Der Dozent nutzt auch Hono 5.0.0-rc.0, und Zertifikat und Schlüssel für HTTPS liegen in `src/config/tls`.
+
+Änderungen in `drizzle.zip` (übernommen am 9.11.): Oxlint 1.92.0, Oxfmt 0.77.0, `tsrs` 0.23.0, `oxlint-tsgolint` entfernt, `drizzle.config.ts` in `ignorePatterns` von Oxlint (mit `@ts-expect-error` in der Datei statt Eintrag in der `tsconfig.json`), `minimumReleaseAgeExclude` für Hono entfernt.
+
+Was die `hono.zip` hat und wie weit wir sind:
+
+| Teil | Dozent | Wir |
+|---|---|---|
+| REST, GraphQL, Mail, ETag | ja | ja (Update und Delete bei GraphQL fehlen) |
+| HTTPS mit HTTP/2 und TLS 1.3 | ja | ja (9.11.) |
+| Konfiguration in `config.toml` (`c12` und Zod) | ja | ja (9.11.) |
+| Pino-Logging, Antwortzeit, Request-Log | ja | ja (9.11.) |
+| Security-Header, CORS, Komprimierung | ja | ja (9.11.) |
+| Fehlerformat Problem Details (RFC 9457) mit zentralem Error-Handler | ja | offen, wir haben `{ message, details }` |
+| `/dev/db_populate` (DB neu laden), Dev-Router | ja | offen |
+| Keycloak mit `jose`, Token-Route, Rollen | ja | offen |
+| Health (liveness, readiness), Prometheus | ja | offen |
+| Suche mit der Methode `QUERY`, File Upload und Download | ja | offen (Upload entfällt im Modell Rezept) |
+| Unit-Tests und Integrationstests mit Vitest | ja | offen (Sai) |
+| Dockerfile (mehrere Varianten), `docker-bake.hcl`, Compose für App, Mailpit, Keycloak, SonarQube, Prometheus | ja | offen |
+| Lasttests mit k6, AsciiDoc und PlantUML, Typedoc | ja | offen |
 
 ## Stand der Arbeit
 
@@ -152,12 +181,15 @@ Adressen:
 | #4 | `POST /rest` mit Zod, Anlegen von Rezept, Titel und Zutaten in einer Transaktion |
 | #5 | `PUT`, `DELETE` und ETag (If-Match, If-None-Match), dazu die Übergabe-Notizen |
 | #6 | GraphQL mit Yoga (Query `rezept` und `rezepte`, Mutation `create`) und Bruno-Ordner `GraphQL` |
-| `feature/ci` | GitHub Actions: Oxfmt, Oxlint und tsc (`.github/workflows/ci.yml`) |
-| `feature/mail` | E-Mail an Mailpit nach dem Anlegen eines Rezepts (`nodemailer`) |
+| #7 `feature/ci` | GitHub Actions: Oxfmt, Oxlint und tsc (`.github/workflows/ci.yml`) |
+| #8 `feature/mail` | E-Mail an Mailpit nach dem Anlegen eines Rezepts (`nodemailer`) |
+| #9 `feature/aufraeumen` | Neue Oxlint- und Oxfmt-Versionen, `drizzle.config.ts` wie beim Dozenten |
+| #10 `feature/config-https` | Konfiguration in `config.toml` und HTTPS mit TLS 1.3 (HTTP/2) |
+| `feature/logging-middleware` | Pino-Logging, Security-Header, CORS, Komprimierung und schwache ETags |
 
 ### REST-Schnittstelle
 
-Server: `http://localhost:3000` (HTTP, siehe "TLS" bei Offen).
+Server: `https://localhost:3000` (HTTPS mit selbst-signiertem Zertifikat).
 
 | Methode und Pfad | Erfolg | Fehler |
 |---|---|---|
@@ -192,7 +224,7 @@ Pflicht sind `rezeptnummer` (Format `RZ-123`), `bewertung` (0 bis 5), `kosten`, 
 
 ### GraphQL-Schnittstelle
 
-Adresse `http://localhost:3000/graphql`, `GET` zeigt im Browser GraphiQL, `POST` führt Abfragen aus. Schema-first mit GraphQL Yoga: das Schema steht in `rezept-typedefs.mts`, die Resolver in `rezept-resolvers.mts`.
+Adresse `https://localhost:3000/graphql`, `GET` zeigt im Browser GraphiQL, `POST` führt Abfragen aus. Schema-first mit GraphQL Yoga: das Schema steht in `rezept-typedefs.mts`, die Resolver in `rezept-resolvers.mts`.
 
 | Operation | Ergebnis |
 |---|---|
@@ -214,7 +246,7 @@ query {
 
 ### E-Mail an Mailpit
 
-Nach dem Anlegen eines Rezepts (`POST /rest` und Mutation `create`) geht eine Mail "Neues Rezept: ID=..." von `Rezept Server` an `Redaktion` (`src/mail/mail.service.mts`, Konstanten in `src/config/mail.mts`). Die Mail wird erst nach dem COMMIT gesendet. Bei einem Fehler (zum Beispiel Mailpit läuft nicht) wird nur ins Log geschrieben, das Rezept bleibt gespeichert und die Antwort ist 201. Timeout 5 Sekunden.
+Nach dem Anlegen eines Rezepts (`POST /rest` und Mutation `create`) geht eine Mail "Neues Rezept: ID=..." von `Rezept Server` an `Redaktion` (`src/mail/mail.service.mts`, Absender, Empfänger und Server im Abschnitt `[mail]` von `config.toml`). Die Mail wird erst nach dem COMMIT gesendet. Bei einem Fehler (zum Beispiel Mailpit läuft nicht) wird nur ins Log geschrieben, das Rezept bleibt gespeichert und die Antwort ist 201. Timeout 5 Sekunden.
 
 ### Bruno-Collection (extras/bruno/javascript)
 
@@ -235,13 +267,17 @@ Die Testfälle für Vitest (siehe oben) entsprechen dieser Collection.
 
 ```text
 src/
-  config/db.mts, server.mts, mail.mts  Drizzle-Client, Port und Mail (Konstanten, kein process.env)
+  config/config.toml, config.mts       Konfiguration (c12 und Zod), paths.mts, cors-options.mts
+  config/db.mts                        Drizzle-Client mit den Werten aus config.toml
+  config/tls/                          certificate.crt (im Repo) und key.pem (nur lokal)
+  logger/                              Pino-Logger, Request-Log und Antwortzeit
   db/schema.mts, relations.mts         Tabellen und Relationen (titel, zutaten, rezept)
-  rezept/rest/                         Hono-Router und Zod-Schemas
+  rezept/rest/                         Hono-Router, Zod-Schemas und etag.mts
   rezept/graphql/                      GraphQL: typedefs, resolvers und Hono-Router mit Yoga
   rezept/service/                      Zugriff auf die DB (Lesen und Schreiben)
   mail/mail.service.mts                Mail an Mailpit mit nodemailer
-  server.mts                           startet den Server
+  app.mts                              Hono-App mit Middleware und Routen
+  server.mts                           startet den HTTPS-Server
   beispiele.mts, beispiele-write.mts   Beispiele des Dozenten, auf Rezept umgestellt
 .github/workflows/ci.yml               GitHub Actions: fmt:check, lint, tsc
 ```
@@ -257,13 +293,17 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Package Manager: **pnpm** (nicht npm, performanter), Runtime Node und Bun
 - Die PlantUML-Diagramme aus Aufgabe 2 sind in dieser Aufgabe enthalten
 - Arbeitsweise im Team: Feature-Branches mit Pull Requests, Enes mergt selbst
-- Hono 5.0.0-rc.0 mit `@hono/node-server` 2.1.6 (die Version steht in `pnpm-workspace.yaml` bei `minimumReleaseAgeExclude`), Bestätigung durch den Dozenten offen
+- Hono 5.0.0-rc.0 mit `@hono/node-server` 2.1.6, vom Dozenten in `hono.zip` bestätigt
 - Suche liefert 404, wenn nichts gefunden wird (wie `GET /rest/:id`). Ungültige Eingaben liefern 422 mit den Fehlern von Zod
 - `PUT` ersetzt Rezept, Titel und alle Zutaten (nicht angegebene optionale Werte werden `NULL`). Die Rezeptnummer ist unveränderlich
 - Optimistische Synchronisation über die Spalte `version` mit `ETag` und `If-Match`
 - Rezept, Titel und Zutaten werden beim Anlegen und Ändern in einer Transaktion geschrieben
 - GraphQL: **Schema-first** mit `createSchema` aus `graphql-yoga` (keine zusätzliche Bibliothek), `rezept(id)` liefert `null` statt 404, Fehler als `BAD_USER_INPUT` mit HTTP-Status 200. Validierung mit denselben Zod-Schemas wie bei REST, `null`-Werte aus der Mutation werden vor der Prüfung entfernt
 - Mail: im Service nach dem COMMIT, damit REST und GraphQL sie gemeinsam nutzen. Ein Mailfehler wird nur protokolliert und verhindert das Anlegen nicht
+- Konfiguration: `config.toml` mit `c12` und Zod-Schema (Standardwerte im Schema), Geheimnisse später in der `.env`. Die DB-Daten stehen nicht mehr als Konstanten im Code
+- HTTPS: `node:http2` mit TLS 1.3, `allowHTTP1` wegen Bruno. Strg+C schließt den Server und die DB-Verbindungen
+- Logging mit Pino (Datei und Konsole). Die Antwortzeit wird mit `performance.now()` gemessen, ohne Temporal-Bibliothek
+- ETag und `If-Match`: wegen `hono/compress` ist der ETag komprimierter Antworten schwach (`W/"0"`). Beide Schreibweisen werden akzeptiert (`src/rezept/rest/etag.mts`)
 - CI: `pnpm/action-setup` und `actions/setup-node` lesen pnpm und Node aus `devEngines` in der `package.json`, `pnpm install --frozen-lockfile`, nur lesender Zugriff (`permissions: contents: read`)
 
 ## Regeln des Dozenten
@@ -324,6 +364,11 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Bei `rezepte` werden die Zutaten pro Rezept einzeln nachgeladen (eine kleine Abfrage je Rezept, höchstens 20). Das reicht hier, kann bei Bedarf in einer Abfrage gebündelt werden
 - Die Hinweise "Agent skills awaiting approval: drizzle-kit" bei `pnpm add` können ignoriert werden
 - Der Mailpit-Compose aus Aufgabe 1 liegt nicht im Repository `hono` (dort gibt es nur `debug` und `postgres`)
+- `hono/compress` macht den ETag komprimierter Antworten schwach (`W/"0"`). Ohne Anpassung lehnt `PUT` den Header `If-Match: W/"0"` mit 412 ab, in Bruno schlugen dadurch 4 Requests fehl
+- Befehle wie `git` und `pnpm` immer im Projektordner `C:\workspace\javascript\drizzle` ausführen. Im Ordner `C:\` legt `pnpm add` sonst einen Ordner `node_modules` an (löschen)
+- GitHub Actions meldete am 9.11. bei drei Läufen `Internal server error` (Fehler bei GitHub, nicht im Code). Auf der Seite des Laufs `Re-run all jobs`
+- `key.pem` steht in der `.gitignore`: `git status` zeigt nur `certificate.crt`. Wer das Repository klont, muss `key.pem` selbst nach `src/config/tls` kopieren
+- Die Oxlint-Regel `import/max-dependencies` (höchstens 10 Imports) ist in `src/app.mts` mit `// oxlint-disable-line` an einer Zeile abgeschaltet, wie beim Dozenten in der Datei `app.mts`
 
 ## Offen
 
@@ -332,7 +377,9 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - [x] Pull Request #4 und #5 gemergt
 - [x] Bruno-Collection im Repository (`extras/bruno/javascript`), GraphQL-Ordner dazu
 - [x] GraphQL mit Yoga, GitHub Actions und E-Mail an Mailpit (8.11., gemergt)
-- [ ] Mail an Herrn Zimmermann mit Repo, Beispiel und zwei Fragen (Hono-Version, Zertifikat und Schlüssel für HTTPS). Entwurf liegt vor
+- [x] Mail an Herrn Zimmermann ist nicht mehr nötig: `hono.zip` beantwortet beide Fragen (Hono-Version und Zertifikat)
+- [x] Aufräumen, Konfiguration mit `config.toml`, HTTPS, Pino-Logging und Middleware (9.11.)
+- [ ] Als Nächstes: Fehlerformat Problem Details mit zentralem Error-Handler (dabei die Bruno-Assertion auf `details.fieldErrors` anpassen) und `/dev/db_populate`
 
 ### Als Nächstes (Sai)
 
@@ -340,14 +387,15 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 
 ### Danach
 
-- [ ] OIDC und OAuth 2 mit Keycloak (Rollen, Token, geschützte Routen)
-- [ ] TLS für den Appserver: `.gitignore` nennt `src/config/tls/key.pem`, Zertifikat und Schlüssel fehlen noch. Bis dahin läuft der Server mit HTTP
+- [ ] OIDC und OAuth 2 mit Keycloak (`jose`, Token-Route, Rollen für `POST`, `PUT`, `DELETE` und die GraphQL-Mutationen), Keycloak-Compose aus Aufgabe 1 oder `extras/compose/keycloak` der `hono.zip`
+- [ ] GraphQL: Update und Delete wie in der `hono.zip`
+- [ ] Health (liveness, readiness) und Prometheus-Metriken
 - [ ] Regeln in `oxlint.config.mts` ergänzen: `no-var`, `prefer-const`, `@stylistic/quotes` (single), `prefer-destructuring`. Mit `pnpm exec oxlint --rules` prüfen, ob es eine Regel gegen Enums gibt
 - [ ] Docker-Image (Dockerfile) und Docker Compose, dabei auch einen Compose-Ordner für Mailpit ins Repository
 - [ ] GitHub Actions: ergänzen um Vitest, sobald die Tests von Sai da sind (brauchen PostgreSQL und den Appserver)
 - [ ] GraphiQL nur in der Entwicklung einschalten
 - [ ] Lasttests mit Grafana k6
-- [ ] OWASP Dependency Check, `pnpm audit`, SonarQube, Pino-Logging
+- [ ] OWASP Dependency Check, `pnpm audit`, SonarQube
 - [ ] PlantUML-Diagramme und Dokumentation (AsciiDoctor)
 - [ ] `.env.example` ohne Secrets ins Repository
 - [ ] Node auf mindestens 26.13 aktualisieren, Docker-Images für Node 26.13 und Bun 1.4.4 klären
