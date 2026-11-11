@@ -23,5 +23,6 @@ body:graphql {
 assert {
   res.status: eq 200
   res.body.data.token.access_token: matches .+\..+\..+
-  res.body.data.token.expires_in: eq 1800
+  res.body.data.token.expires_in: gte 1790
+  res.body.data.token.expires_in: lte 1800
 }

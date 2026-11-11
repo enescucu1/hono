@@ -1,0 +1,24 @@
+meta {
+  name: Prometheus Metriken
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/prometheus
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.headers['content-type']: contains text/plain
+  res.body: contains http_requests_total
+  res.body: contains http_request_duration_seconds
+  res.body: contains /rest/:id
+}
+
+docs {
+  Metriken fuer Prometheus im Textformat. Die Labels `path` enthalten die Route (`/rest/:id`),
+  nicht die konkrete ID. Ohne Token erreichbar, damit Prometheus sie abholen kann.
+}

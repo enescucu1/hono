@@ -61,6 +61,14 @@ export const db = drizzle({
     logger: nodeEnv === 'development',
 });
 
+// Der Pool meldet Fehler inaktiver Verbindungen (z.B. wenn die DB neu gestartet wird) als "error"-Event.
+// Ohne Handler beendet Node.js dann den ganzen Server. So laeuft er weiter und die naechste
+// Anfrage baut eine neue Verbindung auf
+const logPoolError = (error: Error) => {
+    logger.error('Fehler bei einer DB-Verbindung im Pool: %o', error);
+};
+db.$client.on('error', logPoolError);
+
 // DB-Verbindungen des Pools beim Beenden des Servers schliessen
 export const disconnectDB = async () => {
     await db.$client.end();

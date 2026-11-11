@@ -25,8 +25,10 @@ assert {
   res.status: eq 200
   res.headers['content-type']: contains application/json
   res.body.access_token: matches .+\..+\..+
-  res.body.expires_in: eq 1800
-  res.body.refresh_expires_in: eq 3600
+  res.body.expires_in: gte 1790
+  res.body.expires_in: lte 1800
+  res.body.refresh_expires_in: gte 3590
+  res.body.refresh_expires_in: lte 3600
 }
 
 docs {

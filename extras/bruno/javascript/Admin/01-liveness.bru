@@ -1,0 +1,21 @@
+meta {
+  name: Liveness
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/health/liveness
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.headers['content-type']: contains application/json
+  res.body.status: eq up
+}
+
+docs {
+  Der Server laeuft. Ohne Token erreichbar (zum Beispiel fuer Docker).
+}

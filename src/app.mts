@@ -31,12 +31,15 @@ import { devRouter } from './config/dev/dev-router.mts';
 import { getConfig } from './config/config.mts'; // oxlint-disable-line import/max-dependencies
 import { getLogger } from './logger/logger.mts';
 import { graphqlRouter } from './rezept/graphql/graphql.router.mts';
+import { healthRouter } from './admin/health-router.mts';
 import { paths } from './config/paths.mts';
+import { prometheusRouter } from './monitoring/prometheus-router.mts';
 import { requestLogger } from './logger/request-logger.mts';
 import { responseTime } from './logger/response-time.mts';
 import { rezeptGetRouter } from './rezept/rest/rezept-get.router.mts';
 import { rezeptWriteRouter } from './rezept/rest/rezept-write.router.mts';
 import { secureHeaders } from 'hono/secure-headers';
+import { trackMetrics } from './monitoring/prometheus-metrics.mts';
 
 // Web-Applikation mit Hono: Middleware und Routen fuer REST und GraphQL
 export const app = new Hono();
@@ -63,6 +66,9 @@ const securityHeaders = defineMiddleware(async (c: Context, next: Next) => {
 // https://hono.dev/docs/middleware/builtin/compress
 app.use(secureHeaders(), cors(corsOptions), securityHeaders, compress());
 
+// Metriken fuer Prometheus (Anzahl und Dauer der Requests)
+app.use(trackMetrics);
+
 // Antwortzeit und Requests nur bei Log-Level "debug" protokollieren
 if (logger.isLevelEnabled('debug')) {
     app.use(responseTime, requestLogger);
@@ -75,6 +81,8 @@ app.route(paths.rest, rezeptGetRouter);
 app.route(paths.rest, rezeptWriteRouter);
 app.route(paths.graphql, graphqlRouter);
 app.route(paths.auth, authRouter);
+app.route(paths.health, healthRouter);
+app.route(paths.prometheus, prometheusRouter);
 
 // Routen fuer die Entwicklung (DB neu laden), nie in Produktion
 if (nodeEnv === 'development') {

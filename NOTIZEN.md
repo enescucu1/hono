@@ -9,6 +9,8 @@ Letzter Stand: 11.11.2026, morgens (Enes)
 
 Sai macht als Nächstes die **Integrationstests mit Vitest** für die REST-Schnittstelle (Folie: "Vitest mit Fetch API für Integrationstests"). Der REST-Teil ist fertig, die Routen stehen im Abschnitt "REST-Schnittstelle".
 
+Ab dem 11.11. liegen auch alle **übrigen offenen Themen** bei Sai (Docker, k6, Dokumentation, SonarQube, GitHub Actions mit Vitest und weitere), siehe Abschnitt "Offen" am Ende. Der Anwendungscode (REST, GraphQL, Keycloak, Health, Prometheus) ist fertig.
+
 ### Vorher prüfen
 
 - [x] Pull Request #4 (POST) und #5 (PUT, DELETE, ETag) sind in `main` gemergt (7.11., die Konflikte in drei Dateien waren gelöst)
@@ -98,7 +100,7 @@ GraphQL (optional, wenn Zeit bleibt, Vorlage ist der Bruno-Ordner `GraphQL`):
 
 Token und Rollen (neu seit dem 11.11., Bruno-Ordner `Auth` und `REST > Rollen`):
 
-- [ ] `POST /auth/token` mit `admin` und `p`: 200, `access_token` (drei Teile mit Punkt), `expires_in` 1800, `refresh_expires_in` 3600, `Cache-Control: no-store`
+- [ ] `POST /auth/token` mit `admin` und `p`: 200, `access_token` (drei Teile mit Punkt), `expires_in` zwischen 1790 und 1800, `refresh_expires_in` zwischen 3590 und 3600, `Cache-Control: no-store` (nicht auf genau 1800 prüfen, siehe Stolpersteine)
 - [ ] Falsches Passwort: 401 als Problem Details. Body ohne `username`: 422. Body kein JSON: 400
 - [ ] `POST /rest` ohne Token: 401 mit Header `WWW-Authenticate: Bearer`. Mit kaputtem Token (`kein.gueltiger.token`): 401
 - [ ] `POST /rest` als `user`: 201. `DELETE /rest/:id` als `user`: 403. `DELETE` als `admin`: 204
@@ -159,6 +161,7 @@ Adressen:
 - GraphQL: `https://localhost:3000/graphql` (im Browser öffnet sich GraphiQL)
 - Mailpit: Weboberfläche `http://localhost:8025`, SMTP auf Port 1025
 - Keycloak: `https://localhost:8843` (Admin-Konsole, Realm `javascript`), Token über den Server: `POST https://localhost:3000/auth/token`
+- Health: `https://localhost:3000/health/liveness` und `/health/readiness`, Prometheus-Metriken: `https://localhost:3000/prometheus`
 - DB neu laden: `POST https://localhost:3000/dev/db_populate` (nur Entwicklung, braucht `adminPassword` für den User `postgres` in `config.toml`)
 
 ## Keycloak einrichten
@@ -193,7 +196,7 @@ Was die `hono.zip` hat und wie weit wir sind:
 | Fehlerformat Problem Details (RFC 9457) mit zentralem Error-Handler | ja | ja (11.11.) |
 | `/dev/db_populate` (DB neu laden), Dev-Router | ja | ja (11.11., mit Rolle `admin`, nur in der Entwicklung) |
 | Keycloak mit `jose`, Token-Route, Rollen | ja | ja (11.11., Token-Route `/auth/token`, Rollen `admin` und `user` für REST und GraphQL) |
-| Health (liveness, readiness), Prometheus | ja | offen |
+| Health (liveness, readiness), Prometheus | ja | ja (11.11., die Readiness prüft zusätzlich die DB) |
 | Suche mit der Methode `QUERY`, File Upload und Download | ja | offen (Upload entfällt im Modell Rezept) |
 | Unit-Tests und Integrationstests mit Vitest | ja | offen (Sai) |
 | Dockerfile (mehrere Varianten), `docker-bake.hcl`, Compose für App, Mailpit, Keycloak, SonarQube, Prometheus | ja | offen |
@@ -219,6 +222,7 @@ Was die `hono.zip` hat und wie weit wir sind:
 | `feature/fehler-und-populate` | Problem Details als Fehlerformat, zentraler Error-Handler und `/dev/db_populate` (11.11.) |
 | `feature/keycloak` | Keycloak mit `jose`: Token-Route `/auth/token`, Rollenprüfung für REST, GraphQL und `/dev/db_populate`, Bruno mit OAuth 2 (11.11.) |
 | `feature/graphql-update-delete` | GraphQL-Mutationen `update` (Rolle `admin` oder `user`) und `delete` (Rolle `admin`) mit Bruno (11.11.) |
+| `feature/health-prometheus` | Health (`/health/liveness`, `/health/readiness`), Prometheus-Metriken (`/prometheus`) und Fehler-Handler im DB-Pool (11.11.) |
 
 ### REST-Schnittstelle
 
@@ -232,6 +236,9 @@ Server: `https://localhost:3000` (HTTPS mit selbst-signiertem Zertifikat).
 | `PUT /rest/:id` mit `If-Match: "<Version>"` | 204, Header `ETag` mit neuer Version | 400 (kein gültiges JSON), 401, 403, 404, 412 (falsche Form oder veraltete Version), 422, 428 (Header fehlt) |
 | `DELETE /rest/:id` | 204, immer, auch wenn es das Rezept nicht gibt | 401, 403 |
 | `POST /auth/token` (auch `QUERY`) mit `{ username, password }` | 200 mit `access_token`, `expires_in`, `refresh_token`, `refresh_expires_in` | 400, 401 (falsche Zugangsdaten), 422, 503 (Keycloak nicht erreichbar) |
+| `GET /health/liveness` | 200 `{ "status": "up" }` (ohne Token) | |
+| `GET /health/readiness` | 200 `{ "status": "up" }`, wenn die DB antwortet (ohne Token) | 503 als Problem Details, wenn die DB nicht erreichbar ist |
+| `GET /prometheus` | 200, Metriken im Textformat für Prometheus (ohne Token) | |
 
 Berechtigungen: `GET` ist offen. `POST` und `PUT` brauchen die Rolle `admin` oder `user`, `DELETE` und `/dev/db_populate` die Rolle `admin`. Der Token kommt im Header `Authorization: Bearer <Token>`. Fehler sind Problem Details, bei 401 mit dem Header `WWW-Authenticate: Bearer`.
 
@@ -293,12 +300,13 @@ Nach dem Anlegen eines Rezepts (`POST /rest` und Mutation `create`) geht eine Ma
 
 ### Bruno-Collection (extras/bruno/javascript)
 
-Collection `rezept` mit 62 Requests (37 REST, 20 GraphQL, 4 Auth und 1 Dev) im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
+Collection `rezept` mit 65 Requests (37 REST, 20 GraphQL, 4 Auth, 3 Admin und 1 Dev) im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
 
 - `REST > Suche mit ID`: GET mit ID 1, 20, 30, unbekannter und ungültiger ID, `If-None-Match` (304)
 - `REST > Suche mit Suchparameter`: 11 Requests (Alle, Seite 2, Titel, vegetarisch, ungültige Parameter mit 422, kein Treffer mit 404)
 - `REST > Neu anlegen`: POST mit zufälliger Rezeptnummer (wiederholbar), doppelte Nummer, ungültige Daten, unbekannte Property, kein JSON (400)
 - `Dev`: `DB neu laden` (`POST /dev/db_populate`, mit Token als `admin`), setzt die Seed-Daten zurück
+- `Admin`: `Liveness`, `Readiness` und `Prometheus Metriken` (ohne Token, am Ende der Collection, damit in den Metriken schon Requests stehen)
 - `Auth`: `POST /auth/token` als `admin` und `user`, falsches Passwort (401), ohne Benutzername (422)
 - `REST > Rollen`: ohne Token (401), mit ungültigem Token (401), Anlegen als `user` (201), Löschen als `user` (403), Löschen als `admin` (204)
 - `REST > Ändern`: PUT mit `If-Match`, falsche oder fehlende Version, kaputter Header, unbekannte ID, ungültige Daten, Rezeptnummer im Body
@@ -360,6 +368,8 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Fehlerbild: kein oder ungültiger Token ist 401 (REST mit `WWW-Authenticate: Bearer`), fehlende Rolle 403, Keycloak nicht erreichbar bei `/auth/token` 503. Ist Keycloak beim Prüfen eines Tokens nicht erreichbar und die Schlüssel noch nicht zwischengespeichert, ist das ein Fehler im Server (500, nur geloggt). Lesen funktioniert weiter
 - REST: Middleware `rolesRequired('admin', 'user')` vor dem Handler (`src/security/roles-required.mts`). GraphQL: Prüfung im Resolver von `create`, **vor** der Validierung. Beide nutzen `pruefeToken`
 - GraphQL `update` und `delete`: `update` ersetzt das Rezept komplett und nutzt denselben Service wie `PUT` (`rezept-write.service.mts`, Version prüfen und hochzählen). Beim Dozenten ist `update` ein teilweises Ändern, das haben wir nicht übernommen, damit REST und GraphQL gleich arbeiten. `delete` meldet mit `success`, ob es das Rezept gab
+- Health: `GET /health/liveness` (Server läuft) und `GET /health/readiness` (DB antwortet auf `select 1`, sonst 503 als Problem Details). Beide ohne Token, damit Docker oder Kubernetes sie abfragen können. Beim Dozenten ist die Readiness noch ein `TODO`
+- Prometheus: `@prometheus-io/client` 0.16.1 wie beim Dozenten (`collectDefaultMetrics`, Zähler `http_requests_total`, Histogramm `http_request_duration_seconds`). Die Middleware `trackMetrics` steht vor den Routen. Das Label `path` ist die **Route** des Handlers (`/rest/:id`, ermittelt mit `routePath(c, -1)` aus `hono/route`), nicht die URL. Sonst gäbe es für jede ID eine eigene Zeitreihe. Unbekannte URLs erscheinen als `/*`. `GET /prometheus` ist wie beim Dozenten ohne Token, der Compose für Prometheus und Grafana liegt in `extras/compose/prometheus-grafana` der `hono.zip` und ist noch nicht im Repository
 - `/auth/token` nimmt `POST` und `QUERY` (wie `/dev/db_populate`), der Body ist streng validiert (`username` und `password`). Der Server holt den Token per Password Grant bei Keycloak. GraphQL hat dazu die Mutation `token`. Eine Route für den Refresh Token gibt es noch nicht
 - Das Client Secret kommt aus der `.env` (`CLIENT_SECRET`), nicht aus `config.toml`. Fehlt es, bricht der Start mit `CLIENT_SECRET in der Datei .env setzen` ab. Realm, Client und Port haben Standardwerte in `config.mts` (`javascript`, `javascript-client`, 8843), der Abschnitt `[keycloak]` in `config.toml` setzt nur den Host
 - Bruno holt den Token selbst bei Keycloak (OAuth 2 in den Ordnern), nicht über den Appserver, wie beim Dozenten
@@ -435,6 +445,9 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Bruno schreibt beim Anklicken eines Ordners manchmal einen leeren OAuth-2-Block in dessen `folder.bru` (am 11.11. in `GraphQL/folder.bru`). Vor jedem Commit mit `git status` prüfen und die Datei mit `git restore` verwerfen
 - In Bruno müssen Header mit Bindestrich in Klammern stehen: `res.headers['content-type']`, nicht `res.headers.content-type`
 - Die Node-Warnung zu `NODE_TLS_REJECT_UNAUTHORIZED` erscheint bei `pnpm run dev` (`node --env-file=.env`) beim ersten TLS-Zugriff, auch beim ersten Request an Keycloak
+- Wird PostgreSQL beendet oder neu gestartet, meldet der Pool von `pg` das als `error`-Event der inaktiven Verbindungen (`terminating connection due to administrator command`). **Ohne Handler beendet Node.js dann den ganzen Appserver.** Das fiel am 11.11. beim Test der Readiness auf. Seitdem steht in `db.mts` `db.$client.on('error', logPoolError)`: Der Fehler wird geloggt, der Server läuft weiter, und die nächste Anfrage baut eine neue Verbindung auf
+- Bruno kennt die Assertion `isTrue` nicht. Für Booleans `eq true` und `eq false` verwenden
+- `expires_in` im Token ist nicht immer 1800: Keycloak rechnet die Restlaufzeit auf die Sekunde, und Bruno bekam am 11.11. einmal 1799. Assertions und Tests deshalb mit einem Bereich prüfen (`gte 1790` und `lte 1800`, bei `refresh_expires_in` entsprechend um 3600)
 
 ## Offen
 
@@ -448,25 +461,23 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - [x] Problem Details als Fehlerformat, zentraler Error-Handler und `/dev/db_populate` (11.11.)
 - [x] Keycloak mit `jose`: Token-Route, Rollen für REST, GraphQL und `/dev/db_populate`, Bruno mit OAuth 2 (11.11., Bruno 55/55)
 - [x] GraphQL `update` und `delete` mit Rollen (11.11., Bruno 62/62)
-- [ ] Als Nächstes: Health und Prometheus, dann Docker
+- [x] Health (liveness, readiness), Prometheus-Metriken und Fehler-Handler im DB-Pool (11.11., Bruno 65/65)
+- [ ] Pull Requests von Sai prüfen und mergen, Code-Review und Abgabe
+- [ ] Zeiterfassung (Enes, am Ende jeder Arbeitssession) und Projektplan (Sai und Enes) in Excel pflegen
 
-### Als Nächstes (Sai)
+### Sai (Vorschlag von Enes vom 11.11., noch mit Sai abzustimmen)
 
-- [ ] Vitest-Integrationstests (siehe oben), mit Token von `POST /auth/token` für die schreibenden Tests
+Der Code für REST, GraphQL, Keycloak, Health und Prometheus steht. Alles Übrige übernimmt Sai, jeweils als eigener Branch mit Pull Request (wie bei Enes, siehe "Stand der Arbeit"):
 
-### Danach
-
-- [ ] Refresh-Token-Route und Keycloak-Compose im Repository (aus Aufgabe 1 oder `extras/compose/keycloak` der `hono.zip`)
-- [ ] Health (liveness, readiness) und Prometheus-Metriken
-- [ ] Regeln in `oxlint.config.mts` ergänzen: `no-var`, `prefer-const`, `@stylistic/quotes` (single), `prefer-destructuring`. Mit `pnpm exec oxlint --rules` prüfen, ob es eine Regel gegen Enums gibt
-- [ ] Docker-Image (Dockerfile) und Docker Compose, dabei auch einen Compose-Ordner für Mailpit ins Repository
-- [ ] GitHub Actions: ergänzen um Vitest, sobald die Tests von Sai da sind (brauchen PostgreSQL und den Appserver)
-- [ ] GraphiQL nur in der Entwicklung einschalten
+- [ ] Vitest-Integrationstests (siehe oben), mit Token von `POST /auth/token` für die schreibenden Tests, danach `pnpm test`
+- [ ] GitHub Actions: ergänzen um Vitest (brauchen PostgreSQL, Keycloak und den Appserver)
+- [ ] Docker-Image (Dockerfile) und Docker Compose, dabei auch Compose-Ordner für Mailpit, Keycloak und Prometheus mit Grafana ins Repository (Vorlagen in `extras/compose` der `hono.zip`)
 - [ ] Lasttests mit Grafana k6
 - [ ] OWASP Dependency Check, `pnpm audit`, SonarQube
 - [ ] PlantUML-Diagramme und Dokumentation (AsciiDoctor)
+- [ ] Refresh-Token-Route (beim Dozenten in `auth-router`)
+- [ ] GraphiQL nur in der Entwicklung einschalten (`graphiql: true` in `graphql.router.mts`)
 - [ ] `.env.example` ohne Secrets ins Repository
+- [ ] Regeln in `oxlint.config.mts` ergänzen: `no-var`, `prefer-const`, `@stylistic/quotes` (single), `prefer-destructuring`. Mit `pnpm exec oxlint --rules` prüfen, ob es eine Regel gegen Enums gibt
 - [ ] Node auf mindestens 26.13 aktualisieren, Docker-Images für Node 26.13 und Bun 1.4.4 klären
 - [ ] Zertifikat läuft am 07.02.2027 ab, vor der Abgabe prüfen
-- [ ] Projektplan (Sai und Enes) und Zeiterfassung (Enes) in Excel pflegen (Zeiterfassung macht Enes am Ende jeder Arbeitssession)
-- [ ] Code-Review und Abgabe

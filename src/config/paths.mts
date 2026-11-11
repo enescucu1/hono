@@ -17,5 +17,7 @@ export const paths = {
     rest: '/rest',
     graphql: '/graphql',
     auth: '/auth',
+    health: '/health',
+    prometheus: '/prometheus',
     dev: '/dev',
 } as const;
