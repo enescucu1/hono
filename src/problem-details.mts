@@ -17,11 +17,14 @@ import { type ClientErrorStatusCode, type ServerErrorStatusCode } from 'hono/uti
 import { type Context } from 'hono';
 
 export const badRequest = 400;
+export const unauthorized = 401;
+export const forbidden = 403;
 export const notFound = 404;
 export const preconditionFailed = 412;
 export const unprocessableContent = 422;
 export const preconditionRequired = 428;
 export const internalServerError = 500;
+export const serviceUnavailable = 503;
 
 export type ProblemDetails = {
     title: string;
@@ -32,11 +35,14 @@ export type ProblemDetails = {
 // Titel zum Statuscode
 const titles = new Map<number, string>([
     [badRequest, 'Bad Request'],
+    [unauthorized, 'Unauthorized'],
+    [forbidden, 'Forbidden'],
     [notFound, 'Not Found'],
     [preconditionFailed, 'Precondition Failed'],
     [unprocessableContent, 'Unprocessable Content'],
     [preconditionRequired, 'Precondition Required'],
     [internalServerError, 'Internal Server Error'],
+    [serviceUnavailable, 'Service Unavailable'],
 ]);
 
 /**

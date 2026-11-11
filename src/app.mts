@@ -22,13 +22,14 @@ import {
 } from './problem-details.mts';
 import { type ClientErrorStatusCode } from 'hono/utils/http-status';
 import { HTTPException } from 'hono/http-exception';
+import { authRouter } from './security/auth-router.mts';
 import { compress } from 'hono/compress';
 import { cors } from 'hono/cors';
 import { corsOptions } from './config/cors-options.mts';
 import { defineMiddleware } from 'hono/factory';
 import { devRouter } from './config/dev/dev-router.mts';
-import { getConfig } from './config/config.mts';
-import { getLogger } from './logger/logger.mts'; // oxlint-disable-line import/max-dependencies
+import { getConfig } from './config/config.mts'; // oxlint-disable-line import/max-dependencies
+import { getLogger } from './logger/logger.mts';
 import { graphqlRouter } from './rezept/graphql/graphql.router.mts';
 import { paths } from './config/paths.mts';
 import { requestLogger } from './logger/request-logger.mts';
@@ -73,6 +74,7 @@ if (logger.isLevelEnabled('debug')) {
 app.route(paths.rest, rezeptGetRouter);
 app.route(paths.rest, rezeptWriteRouter);
 app.route(paths.graphql, graphqlRouter);
+app.route(paths.auth, authRouter);
 
 // Routen fuer die Entwicklung (DB neu laden), nie in Produktion
 if (nodeEnv === 'development') {

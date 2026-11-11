@@ -92,7 +92,18 @@ export const typeDefs = /* GraphQL */ `
         rezepte(suchkriterien: Suchkriterien): [Rezept!]!
     }
 
+    # Antwort von Keycloak, die Namen stehen im JSON von Keycloak so (mit Unterstrich)
+    type TokenPayload {
+        access_token: String!
+        expires_in: Int!
+        refresh_token: String!
+        refresh_expires_in: Int!
+    }
+
     type Mutation {
+        # nur mit Token und der Rolle "admin" oder "user"
         create(input: RezeptInput!): CreatePayload!
+        # Access Token von Keycloak holen
+        token(username: String!, password: String!): TokenPayload
     }
 `;

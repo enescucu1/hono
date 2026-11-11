@@ -1,0 +1,38 @@
+meta {
+  name: Loeschen als user
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/rest/{{userId}}
+  body: none
+  auth: oauth2
+}
+
+auth:oauth2 {
+  grant_type: password
+  access_token_url: {{oidcTokenUrl}}
+  refresh_token_url: 
+  username: user
+  password: p
+  client_id: {{clientId}}
+  client_secret: {{clientSecret}}
+  scope: 
+  credentials_placement: body
+  credentials_id: user
+  token_placement: header
+  token_header_prefix: Bearer
+  auto_fetch_token: true
+  auto_refresh_token: false
+}
+
+assert {
+  res.status: eq 403
+  res.body.title: eq Forbidden
+  res.body.statusCode: eq 403
+}
+
+docs {
+  Loeschen darf nur die Rolle `admin`. Der Benutzer `user` bekommt 403.
+}

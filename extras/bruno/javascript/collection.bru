@@ -1,13 +1,45 @@
+auth {
+  mode: oauth2
+}
+
+auth:oauth2 {
+  grant_type: authorization_code
+  callback_url: 
+  authorization_url: 
+  access_token_url: 
+  refresh_token_url: 
+  client_id: 
+  client_secret: 
+  scope: 
+  state: 
+  pkce: false
+  credentials_placement: body
+  credentials_id: credentials
+  token_source: access_token
+  token_placement: header
+  token_header_prefix: Bearer
+  auto_fetch_token: true
+  auto_refresh_token: false
+}
+
 vars:pre-request {
   baseUrl: https://localhost:3000
+  keycloakUrl: https://localhost:8843
+  realm: javascript
+  oidcTokenUrl: {{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token
+  tokenUrl: {{baseUrl}}/auth/token
 }
 
 docs {
   # Rezept (Aufgabe 3: Hono, Drizzle, PostgreSQL)
-
-  Voraussetzung: PostgreSQL und der Appserver laufen (`pnpm run dev`).
+  
+  Voraussetzung: PostgreSQL, Keycloak und der Appserver laufen (`pnpm run dev`).
+  Schreibende Requests holen sich den Access Token selbst von Keycloak (OAuth 2, Password Grant).
+  Dafuer braucht das Environment die Variablen `clientId` (javascript-client), `username` (admin),
+  `clientSecret` und `password` (die beiden als Secret). Das Secret steht in Keycloak unter
+  Clients > javascript-client > Credentials.
   Die Adresse steht in der Variable `baseUrl` (Collection > Vars).
-
+  
   Reihenfolge fuer PUT: Erst `Suche mit ID > Vorhandene ID 30` senden. Dabei wird der
   ETag als Variable `etag` gemerkt und von den PUT-Requests als `If-Match` benutzt.
 }

@@ -1,0 +1,44 @@
+meta {
+  name: Neues Rezept ohne Token (Mutation)
+  type: graphql
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation ($i: RezeptInput!) {
+    create(input: $i) {
+      id
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "i": {
+      "rezeptnummer": "RZ-OHNE-TOKEN",
+      "bewertung": 4,
+      "schwierigkeit": "MITTEL",
+      "kosten": 12.5,
+      "zubereitungszeit": 40,
+      "vegetarisch": true,
+      "titel": { "titel": "Ohne Token" },
+      "zutaten": [{ "bezeichnung": "Wasser", "menge": 1, "einheit": "l" }]
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.errors[0].extensions.code: eq UNAUTHENTICATED
+}
+
+docs {
+  Bei GraphQL ist der HTTP-Status 200, der Fehler steht in `errors` mit dem Code `UNAUTHENTICATED`
+  (kein gueltiger Token) bzw. `FORBIDDEN` (Rolle fehlt).
+}

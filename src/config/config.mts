@@ -41,6 +41,7 @@ const logLevelDefault = logLevels.find((level) => level === logLevelEnv) ?? 'inf
 const maxPort = 65_535;
 const standardPort = 3000;
 const smtpPort = 1025;
+const keycloakPort = 8843;
 
 // Zod-Schema fuer config.toml
 const ConfigSchema = z.object({
@@ -72,6 +73,22 @@ const ConfigSchema = z.object({
         // oxlint-enable no-magic-numbers
         // /dev/db_populate: DB neu laden (nur in der Entwicklung)
         populate: z.boolean().default(false),
+    }),
+
+    // Keycloak: Realm "javascript" mit dem Client "javascript-client". Das Client Secret steht
+    // in der Datei .env (CLIENT_SECRET=...) und nicht im Repository.
+    keycloak: z.object({
+        https: z.boolean().default(true),
+        host: z.string().default('localhost'),
+        port: z.number().int().min(1).max(maxPort).default(keycloakPort),
+        realm: z.string().default('javascript'),
+        clientId: z.string().default('javascript-client'),
+        clientSecret: z
+            .string()
+            .min(1, 'CLIENT_SECRET in der Datei .env setzen')
+            .prefault(() => process.env['CLIENT_SECRET']?.replace(/^CLIENT_SECRET=/u, '') ?? ''),
+        // Audience im Access Token
+        audience: z.array(z.string()).default(['account']),
     }),
 
     mail: z.object({

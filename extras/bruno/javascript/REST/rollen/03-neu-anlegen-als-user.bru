@@ -1,0 +1,64 @@
+meta {
+  name: Neu anlegen als user
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/rest
+  body: json
+  auth: oauth2
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:oauth2 {
+  grant_type: password
+  access_token_url: {{oidcTokenUrl}}
+  refresh_token_url: 
+  username: user
+  password: p
+  client_id: {{clientId}}
+  client_secret: {{clientSecret}}
+  scope: 
+  credentials_placement: body
+  credentials_id: user
+  token_placement: header
+  token_header_prefix: Bearer
+  auto_fetch_token: true
+  auto_refresh_token: false
+}
+
+body:json {
+  {
+    "rezeptnummer": "{{rezeptnummer}}",
+    "bewertung": 4,
+    "schwierigkeit": "MITTEL",
+    "kosten": 12.5,
+    "zubereitungszeit": 40,
+    "vegetarisch": true,
+    "titel": { "titel": "Rollentest" },
+    "zutaten": [{ "bezeichnung": "Wasser", "menge": 1, "einheit": "l" }]
+  }
+}
+
+script:pre-request {
+  const nummer = String(Math.floor(100000 + Math.random() * 900000));
+  bru.setVar("rezeptnummer", `RZ-${nummer}`);
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("userId", res.getHeader("location").split("/").pop());
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  Die Rolle `user` darf Rezepte anlegen. Das Token holt Bruno mit dem Benutzer `user` (Passwort `p`).
+}
