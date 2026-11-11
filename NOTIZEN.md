@@ -3,7 +3,7 @@
 Gruppe 2, Enes Cubukcu und Sai Kujala. GitHub: `https://github.com/enescucu1/hono` (öffentlich).
 Zeiterfassung (nur Enes) und Projektplan (Sai und Enes) stehen in `SWE_Enes_Cubukcu_Zeiterfassung_Planung_Aufgabe3.xlsx` (wie bei Aufgabe 1).
 
-Letzter Stand: 9.11.2026, abends (Enes)
+Letzter Stand: 11.11.2026, nachts (Enes)
 
 ## Übergabe an Sai: Vitest-Integrationstests
 
@@ -40,8 +40,8 @@ Sai macht als Nächstes die **Integrationstests mit Vitest** für die REST-Schni
 - Die Tests rufen den **laufenden** Server auf `https://localhost:3000` auf. Voraussetzung: PostgreSQL und `pnpm run dev` laufen (wie bei Aufgabe 1: Backend und Appserver laufen, dann `pnpm test`). Das Zertifikat ist selbst-signiert, deshalb `NODE_TLS_REJECT_UNAUTHORIZED=0` (steht in der `.env` und in der `vitest.config.mts` des Dozenten)
 - Der Server erlaubt HTTP/1.1 und HTTP/2. Der Dozent testet mit `axios` und `httpVersion: 2`, die Fetch API (`fetch`, in Node eingebaut) geht auch, spricht aber nur HTTP 1.1
 - Antworten sind komprimiert (gzip), der ETag ist dann schwach (`W/"0"`). Der Server akzeptiert das bei `If-Match` und `If-None-Match`, die Tests dürfen den ETag aus dem Header unverändert zurückschicken
-- Das Neuladen der DB über `/dev/db_populate` und das Token von Keycloak (wie in `setup.global.mts` der `hono.zip`) gibt es bei uns **noch nicht**. Bis dahin nur die Seed-Daten lesen und mit eigenen Rezepten arbeiten (siehe unten)
-- Fehlerantworten haben die Form `{ "message": "...", "details": ... }`, bei 422 steht in `details` das Ergebnis von `z.flattenError`
+- Die DB lässt sich seit dem 11.11. mit `POST /dev/db_populate` (oder der Methode `QUERY`) auf die Seed-Daten zurücksetzen, zum Beispiel in einem `beforeAll` (nur mit `NODE_ENV=development` und `populate = true` in `config.toml`). Das Token von Keycloak (wie in `setup.global.mts` der `hono.zip`) gibt es bei uns **noch nicht**, die Dev-Route braucht es deshalb noch nicht
+- Fehlerantworten haben das Format Problem Details (RFC 9457, vereinfacht wie beim Dozenten): `{ "title": "Not Found", "statusCode": 404, "detail": ... }` mit `Content-Type: application/problem+json`. Bei 422 steht in `detail` das Ergebnis von `z.flattenError` (`formErrors` und `fieldErrors`), sonst ein Text
 - `204` und `304` haben keinen Body. Header lesen mit `response.headers.get('etag')` und `response.headers.get('location')`
 - **Testdaten:** Tests, die Daten ändern (POST, PUT, DELETE), legen sich ihr Rezept selbst per `POST` an (zufällige Rezeptnummer, Format `RZ-` plus 3 bis 6 Ziffern, zum Beispiel `RZ-` plus sechs zufällige Ziffern) und räumen mit `DELETE` auf. Lesetests nutzen die Seed-Rezepte (siehe "Testdaten")
 - Beim `POST` (und bei der GraphQL-Mutation `create`) geht eine Mail an Mailpit. Die Tests prüfen die Mail nicht. Läuft Mailpit nicht, ist das für die Tests egal
@@ -69,7 +69,7 @@ POST:
 - [ ] Minimaler Body (nur Pflichtfelder): 201
 - [ ] Gleiche Rezeptnummer noch einmal: 422
 - [ ] Ungültige Daten (Rezeptnummer `XY-1`, Bewertung 9, Kosten -1, Zubereitungszeit 0, leerer Titel, leere Zutatenliste): 422
-- [ ] Kein JSON im Body und unbekannte Property: 422
+- [ ] Kein JSON im Body: **400** (`title` ist `Bad Request`). Ein Test kann das nur mit `Content-Type: text/plain` senden, bei `application/json` verpackt zum Beispiel Bruno einen ungültigen Text selbst als JSON-String. Unbekannte Property: 422
 
 PUT (immer mit `If-Match`):
 
@@ -144,6 +144,7 @@ Adressen:
 - REST: `https://localhost:3000/rest` (HTTPS mit selbst-signiertem Zertifikat, in Bruno ist die SSL-Prüfung aus)
 - GraphQL: `https://localhost:3000/graphql` (im Browser öffnet sich GraphiQL)
 - Mailpit: Weboberfläche `http://localhost:8025`, SMTP auf Port 1025
+- DB neu laden: `POST https://localhost:3000/dev/db_populate` (nur Entwicklung, braucht `adminPassword` für den User `postgres` in `config.toml`)
 
 ## Beispiele des Dozenten (hono.zip und drizzle.zip vom 9.11.)
 
@@ -160,8 +161,8 @@ Was die `hono.zip` hat und wie weit wir sind:
 | Konfiguration in `config.toml` (`c12` und Zod) | ja | ja (9.11.) |
 | Pino-Logging, Antwortzeit, Request-Log | ja | ja (9.11.) |
 | Security-Header, CORS, Komprimierung | ja | ja (9.11.) |
-| Fehlerformat Problem Details (RFC 9457) mit zentralem Error-Handler | ja | offen, wir haben `{ message, details }` |
-| `/dev/db_populate` (DB neu laden), Dev-Router | ja | offen |
+| Fehlerformat Problem Details (RFC 9457) mit zentralem Error-Handler | ja | ja (11.11.) |
+| `/dev/db_populate` (DB neu laden), Dev-Router | ja | ja (11.11., noch ohne Rolle `admin`, nur in der Entwicklung) |
 | Keycloak mit `jose`, Token-Route, Rollen | ja | offen |
 | Health (liveness, readiness), Prometheus | ja | offen |
 | Suche mit der Methode `QUERY`, File Upload und Download | ja | offen (Upload entfällt im Modell Rezept) |
@@ -185,7 +186,8 @@ Was die `hono.zip` hat und wie weit wir sind:
 | #8 `feature/mail` | E-Mail an Mailpit nach dem Anlegen eines Rezepts (`nodemailer`) |
 | #9 `feature/aufraeumen` | Neue Oxlint- und Oxfmt-Versionen, `drizzle.config.ts` wie beim Dozenten |
 | #10 `feature/config-https` | Konfiguration in `config.toml` und HTTPS mit TLS 1.3 (HTTP/2) |
-| `feature/logging-middleware` | Pino-Logging, Security-Header, CORS, Komprimierung und schwache ETags |
+| #11 `feature/logging-middleware` | Pino-Logging, Security-Header, CORS, Komprimierung und schwache ETags |
+| `feature/fehler-und-populate` | Problem Details als Fehlerformat, zentraler Error-Handler und `/dev/db_populate` (11.11.) |
 
 ### REST-Schnittstelle
 
@@ -193,10 +195,10 @@ Server: `https://localhost:3000` (HTTPS mit selbst-signiertem Zertifikat).
 
 | Methode und Pfad | Erfolg | Fehler |
 |---|---|---|
-| `GET /rest?titel&schwierigkeit&vegetarisch&seite&groesse` | 200, Array mit Titel je Rezept, 5 pro Seite (maximal 20), sortiert nach ID | 404 keine Treffer, 422 ungültige oder unbekannte Parameter |
+| `GET /rest?titel&schwierigkeit&vegetarisch&seite&groesse` | 200, Array mit Titel je Rezept, 5 pro Seite (maximal 20), sortiert nach ID | 404 keine Treffer, 422 ungültige oder unbekannte Parameter (alle als Problem Details) |
 | `GET /rest/:id` | 200 mit Titel und Zutaten, Header `ETag: "<Version>"`, 304 bei passendem `If-None-Match` | 404 |
-| `POST /rest` | 201 ohne Body, Header `Location` | 422 (ungültige Daten, unbekannte Property, kein JSON, doppelte Rezeptnummer) |
-| `PUT /rest/:id` mit `If-Match: "<Version>"` | 204, Header `ETag` mit neuer Version | 404, 412 (falsche Form oder veraltete Version), 422, 428 (Header fehlt) |
+| `POST /rest` | 201 ohne Body, Header `Location` | 400 (kein gültiges JSON), 422 (ungültige Daten, unbekannte Property, doppelte Rezeptnummer) |
+| `PUT /rest/:id` mit `If-Match: "<Version>"` | 204, Header `ETag` mit neuer Version | 400 (kein gültiges JSON), 404, 412 (falsche Form oder veraltete Version), 422, 428 (Header fehlt) |
 | `DELETE /rest/:id` | 204, immer, auch wenn es das Rezept nicht gibt | |
 
 Beispiel für den Body von `POST` (bei `PUT` ohne `rezeptnummer`):
@@ -250,11 +252,12 @@ Nach dem Anlegen eines Rezepts (`POST /rest` und Mutation `create`) geht eine Ma
 
 ### Bruno-Collection (extras/bruno/javascript)
 
-Collection `rezept` mit 42 Requests (32 REST und 10 GraphQL) im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
+Collection `rezept` mit 43 Requests (32 REST, 10 GraphQL und 1 Dev) im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
 
 - `REST > Suche mit ID`: GET mit ID 1, 20, 30, unbekannter und ungültiger ID, `If-None-Match` (304)
 - `REST > Suche mit Suchparameter`: 11 Requests (Alle, Seite 2, Titel, vegetarisch, ungültige Parameter mit 422, kein Treffer mit 404)
-- `REST > Neu anlegen`: POST mit zufälliger Rezeptnummer (wiederholbar), doppelte Nummer, ungültige Daten, unbekannte Property, kein JSON
+- `REST > Neu anlegen`: POST mit zufälliger Rezeptnummer (wiederholbar), doppelte Nummer, ungültige Daten, unbekannte Property, kein JSON (400)
+- `Dev`: `DB neu laden` (`POST /dev/db_populate`), setzt die Seed-Daten zurück, steht am Ende der Collection
 - `REST > Ändern`: PUT mit `If-Match`, falsche oder fehlende Version, kaputter Header, unbekannte ID, ungültige Daten, Rezeptnummer im Body
 - `REST > Löschen`: DELETE für Rezept 50, das neu angelegte Rezept und eine unbekannte ID
 - `GraphQL`: Rezept 20, unbekannte ID (`null`), alle Rezepte, Suche nach Titel, vegetarisch und `EINFACH`, zu große Seitengröße, Mutation `create` (wiederholbar), doppelte Rezeptnummer, ungültige Daten, danach `DELETE` des neuen Rezepts über REST (Variable `graphqlId`)
@@ -294,7 +297,7 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Die PlantUML-Diagramme aus Aufgabe 2 sind in dieser Aufgabe enthalten
 - Arbeitsweise im Team: Feature-Branches mit Pull Requests, Enes mergt selbst
 - Hono 5.0.0-rc.0 mit `@hono/node-server` 2.1.6, vom Dozenten in `hono.zip` bestätigt
-- Suche liefert 404, wenn nichts gefunden wird (wie `GET /rest/:id`). Ungültige Eingaben liefern 422 mit den Fehlern von Zod
+- Suche liefert 404, wenn nichts gefunden wird (wie `GET /rest/:id`). Ungültige Eingaben liefern 422 mit den Fehlern von Zod in `detail`
 - `PUT` ersetzt Rezept, Titel und alle Zutaten (nicht angegebene optionale Werte werden `NULL`). Die Rezeptnummer ist unveränderlich
 - Optimistische Synchronisation über die Spalte `version` mit `ETag` und `If-Match`
 - Rezept, Titel und Zutaten werden beim Anlegen und Ändern in einer Transaktion geschrieben
@@ -304,6 +307,9 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - HTTPS: `node:http2` mit TLS 1.3, `allowHTTP1` wegen Bruno. Strg+C schließt den Server und die DB-Verbindungen
 - Logging mit Pino (Datei und Konsole). Die Antwortzeit wird mit `performance.now()` gemessen, ohne Temporal-Bibliothek
 - ETag und `If-Match`: wegen `hono/compress` ist der ETag komprimierter Antworten schwach (`W/"0"`). Beide Schreibweisen werden akzeptiert (`src/rezept/rest/etag.mts`)
+- Fehlerformat: Problem Details (`src/problem-details.mts`, wie beim Dozenten mit `title`, `statusCode`, `detail`). Der zentrale Error-Handler in `src/app.mts` gibt 404 für unbekannte Routen, 500 für unerwartete Fehler (nur im Log, nicht in der Antwort) und `HTTPException` unverändert weiter
+- Kein gültiges JSON im Body ist 400 (Syntaxfehler), ein gültiges JSON mit falschen Daten ist 422 (Inhaltsfehler). Vorher war beides 422 (`src/rezept/rest/read-json.mts`)
+- `/dev/db_populate` gibt es nur bei `NODE_ENV=development` und `populate = true`. Das SQL läuft in zwei Verbindungen: `drop-table.sql` und `create-table.sql` mit dem normalen User in einer Transaktion, `copy-csv.sql` mit dem Admin-User (`COPY` aus Dateien braucht Rechte). Eine Rollenprüfung fehlt bis Keycloak da ist
 - CI: `pnpm/action-setup` und `actions/setup-node` lesen pnpm und Node aus `devEngines` in der `package.json`, `pnpm install --frozen-lockfile`, nur lesender Zugriff (`permissions: contents: read`)
 
 ## Regeln des Dozenten
@@ -379,7 +385,8 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - [x] GraphQL mit Yoga, GitHub Actions und E-Mail an Mailpit (8.11., gemergt)
 - [x] Mail an Herrn Zimmermann ist nicht mehr nötig: `hono.zip` beantwortet beide Fragen (Hono-Version und Zertifikat)
 - [x] Aufräumen, Konfiguration mit `config.toml`, HTTPS, Pino-Logging und Middleware (9.11.)
-- [ ] Als Nächstes: Fehlerformat Problem Details mit zentralem Error-Handler (dabei die Bruno-Assertion auf `details.fieldErrors` anpassen) und `/dev/db_populate`
+- [x] Problem Details als Fehlerformat, zentraler Error-Handler und `/dev/db_populate` (11.11.)
+- [ ] Als Nächstes: Keycloak (siehe unten). Danach schützt die Rolle `admin` auch `/dev/db_populate`
 
 ### Als Nächstes (Sai)
 
