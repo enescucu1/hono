@@ -3,7 +3,7 @@
 Gruppe 2, Enes Cubukcu und Sai Kujala. GitHub: `https://github.com/enescucu1/hono` (öffentlich).
 Zeiterfassung (nur Enes) und Projektplan (Sai und Enes) stehen in `SWE_Enes_Cubukcu_Zeiterfassung_Planung_Aufgabe3.xlsx` (wie bei Aufgabe 1).
 
-Letzter Stand: 11.11.2026, nachts (Enes)
+Letzter Stand: 11.11.2026, morgens (Enes)
 
 ## Übergabe an Sai: Vitest-Integrationstests
 
@@ -40,8 +40,10 @@ Sai macht als Nächstes die **Integrationstests mit Vitest** für die REST-Schni
 - Die Tests rufen den **laufenden** Server auf `https://localhost:3000` auf. Voraussetzung: PostgreSQL und `pnpm run dev` laufen (wie bei Aufgabe 1: Backend und Appserver laufen, dann `pnpm test`). Das Zertifikat ist selbst-signiert, deshalb `NODE_TLS_REJECT_UNAUTHORIZED=0` (steht in der `.env` und in der `vitest.config.mts` des Dozenten)
 - Der Server erlaubt HTTP/1.1 und HTTP/2. Der Dozent testet mit `axios` und `httpVersion: 2`, die Fetch API (`fetch`, in Node eingebaut) geht auch, spricht aber nur HTTP 1.1
 - Antworten sind komprimiert (gzip), der ETag ist dann schwach (`W/"0"`). Der Server akzeptiert das bei `If-Match` und `If-None-Match`, die Tests dürfen den ETag aus dem Header unverändert zurückschicken
-- Die DB lässt sich seit dem 11.11. mit `POST /dev/db_populate` (oder der Methode `QUERY`) auf die Seed-Daten zurücksetzen, zum Beispiel in einem `beforeAll` (nur mit `NODE_ENV=development` und `populate = true` in `config.toml`). Das Token von Keycloak (wie in `setup.global.mts` der `hono.zip`) gibt es bei uns **noch nicht**, die Dev-Route braucht es deshalb noch nicht
+- Die DB lässt sich seit dem 11.11. mit `POST /dev/db_populate` (oder der Methode `QUERY`) auf die Seed-Daten zurücksetzen, zum Beispiel in einem `beforeAll` (nur mit `NODE_ENV=development` und `populate = true` in `config.toml`). Die Route braucht seit Keycloak einen Token mit der Rolle `admin` (siehe unten)
 - Fehlerantworten haben das Format Problem Details (RFC 9457, vereinfacht wie beim Dozenten): `{ "title": "Not Found", "statusCode": 404, "detail": ... }` mit `Content-Type: application/problem+json`. Bei 422 steht in `detail` das Ergebnis von `z.flattenError` (`formErrors` und `fieldErrors`), sonst ein Text
+- **Token:** Schreibende Requests (`POST`, `PUT`, `DELETE`, GraphQL-Mutation `create`) und `/dev/db_populate` brauchen einen Access Token von Keycloak. Die Tests holen ihn mit `POST /auth/token` und dem Body `{ "username": "admin", "password": "p" }` (Antwort mit `access_token` und `expires_in` 1800) und schicken ihn im Header `Authorization: Bearer <Token>`. Einmal pro Testlauf holen, zum Beispiel in `setup.global.mts` wie beim Dozenten. Rolle `admin` darf alles. Der Benutzer `user` (Passwort `p`) darf `POST`, `PUT` und GraphQL `create`, aber weder `DELETE` noch `/dev/db_populate`. Ohne gültigen Token antwortet der Server mit 401, mit fehlender Rolle mit 403. GraphQL meldet beides in `errors` (`extensions.code` gleich `UNAUTHENTICATED` oder `FORBIDDEN`) bei HTTP-Status 200
+- Das Client Secret für `POST /auth/token` steht nur in der `.env` des Servers (`CLIENT_SECRET`), die Tests brauchen es nicht und dürfen es nicht kennen. Token und Secret nie in Logs, Fehlermeldungen oder Commits ausgeben
 - `204` und `304` haben keinen Body. Header lesen mit `response.headers.get('etag')` und `response.headers.get('location')`
 - **Testdaten:** Tests, die Daten ändern (POST, PUT, DELETE), legen sich ihr Rezept selbst per `POST` an (zufällige Rezeptnummer, Format `RZ-` plus 3 bis 6 Ziffern, zum Beispiel `RZ-` plus sechs zufällige Ziffern) und räumen mit `DELETE` auf. Lesetests nutzen die Seed-Rezepte (siehe "Testdaten")
 - Beim `POST` (und bei der GraphQL-Mutation `create`) geht eine Mail an Mailpit. Die Tests prüfen die Mail nicht. Läuft Mailpit nicht, ist das für die Tests egal
@@ -94,6 +96,15 @@ GraphQL (optional, wenn Zeit bleibt, Vorlage ist der Bruno-Ordner `GraphQL`):
 - [ ] `rezepte(suchkriterien: { groesse: 100 })`: 200, aber `errors[0].extensions.code` ist `BAD_USER_INPUT`
 - [ ] Mutation `create` mit gültigen Daten: `data.create.id` ist eine Zahl (danach per `DELETE /rest/<id>` aufräumen). Mit vorhandener Rezeptnummer oder ungültigen Daten: `BAD_USER_INPUT`
 
+Token und Rollen (neu seit dem 11.11., Bruno-Ordner `Auth` und `REST > Rollen`):
+
+- [ ] `POST /auth/token` mit `admin` und `p`: 200, `access_token` (drei Teile mit Punkt), `expires_in` 1800, `refresh_expires_in` 3600, `Cache-Control: no-store`
+- [ ] Falsches Passwort: 401 als Problem Details. Body ohne `username`: 422. Body kein JSON: 400
+- [ ] `POST /rest` ohne Token: 401 mit Header `WWW-Authenticate: Bearer`. Mit kaputtem Token (`kein.gueltiger.token`): 401
+- [ ] `POST /rest` als `user`: 201. `DELETE /rest/:id` als `user`: 403. `DELETE` als `admin`: 204
+- [ ] GraphQL `create` ohne Token: `errors[0].extensions.code` gleich `UNAUTHENTICATED`. Mutation `token` mit `admin`: `data.token.access_token`
+- [ ] `POST /dev/db_populate` ohne Token: 401, als `user`: 403, als `admin`: 200
+
 ## Projekt einrichten (für Sai)
 
 Pfad wie bei Enes `C:\workspace\javascript\...` (nicht in einem Pfad mit Leerzeichen).
@@ -126,7 +137,8 @@ Pfad wie bei Enes `C:\workspace\javascript\...` (nicht in einem Pfad mit Leerzei
      Erwartet: `COPY 9`, `COPY 9`, `COPY 19`
    - Wer noch keinen Postgres hat: `extras/compose/postgres/ReadMe.md` durcharbeiten und überall `buch` durch `rezept` ersetzen
 6. **Schlüssel für HTTPS:** `key.pem` aus der `hono.zip` des Dozenten (`src/config/tls/key.pem`) in das Verzeichnis `src/config/tls` des Projekts kopieren. Das Zertifikat `certificate.crt` liegt schon im Repository
-7. **Prüfen:** `pnpm run lint` und `pnpm run tsc` ohne Fehler, dann `pnpm run dev` und im Browser `https://localhost:3000/rest/20` (die Zertifikatswarnung bestätigen)
+7. **Keycloak** (seit dem 11.11. nötig für alle schreibenden Requests): Abschnitt "Keycloak einrichten" unten durcharbeiten, dann in der `.env` die Zeile `CLIENT_SECRET=...` ergänzen. Ohne diese Zeile startet der Appserver nicht
+8. **Prüfen:** `pnpm run lint` und `pnpm run tsc` ohne Fehler, dann `pnpm run dev` und im Browser `https://localhost:3000/rest/20` (die Zertifikatswarnung bestätigen)
 
 ## Starten und Beenden
 
@@ -134,8 +146,9 @@ Reihenfolge zum Starten:
 
 1. Docker Desktop starten
 2. PostgreSQL: Enes startet ihn aus dem FastAPI-Ordner (`cd C:\workspace\python\fastapi\extras\compose\postgres`, dann `docker compose up -d`), siehe "Projekt einrichten"
-3. Mailpit (optional, nur für die Mail beim Anlegen): der Compose-Ordner `mailpit` aus Aufgabe 1 (`docker compose up -d`). Im Repository `hono` gibt es dafür noch keinen Compose-Ordner (steht unter "Offen")
-4. Appserver im Projektordner: `pnpm run dev`, warten auf `Der Appserver laeuft auf https://localhost:3000`. Das Log steht in der Konsole und in `log/server.log` (nicht im Repository)
+3. Keycloak: `cd C:\workspace\python\fastapi\extras\compose\keycloak`, dann `docker compose up -d`. Dieser Compose-Ordner startet PostgreSQL mit, Schritt 2 entfällt dann. Keycloak braucht nach dem Start etwa eine Minute (`docker compose logs keycloak --tail 5`, bis `Bootstrap completed` erscheint)
+4. Mailpit (optional, nur für die Mail beim Anlegen): der Compose-Ordner `mailpit` aus Aufgabe 1 (`docker compose up -d`). Im Repository `hono` gibt es dafür noch keinen Compose-Ordner (steht unter "Offen")
+5. Appserver im Projektordner: `pnpm run dev`, warten auf `Der Appserver laeuft auf https://localhost:3000`. Das Log steht in der Konsole und in `log/server.log` (nicht im Repository)
 
 Beenden: Appserver mit Strg+C, dann `docker compose down` in den Compose-Ordnern. Die Daten bleiben in den Volumes erhalten.
 
@@ -144,7 +157,22 @@ Adressen:
 - REST: `https://localhost:3000/rest` (HTTPS mit selbst-signiertem Zertifikat, in Bruno ist die SSL-Prüfung aus)
 - GraphQL: `https://localhost:3000/graphql` (im Browser öffnet sich GraphiQL)
 - Mailpit: Weboberfläche `http://localhost:8025`, SMTP auf Port 1025
+- Keycloak: `https://localhost:8843` (Admin-Konsole, Realm `javascript`), Token über den Server: `POST https://localhost:3000/auth/token`
 - DB neu laden: `POST https://localhost:3000/dev/db_populate` (nur Entwicklung, braucht `adminPassword` für den User `postgres` in `config.toml`)
+
+## Keycloak einrichten
+
+Wir nutzen den Keycloak aus Aufgabe 1 (Compose-Ordner `keycloak`, Port 8843) mit einem **eigenen Realm `javascript`** und dem Client `javascript-client`, wie in `extras/compose/keycloak/ReadMe.md` der `hono.zip`. Der Realm `python` aus Aufgabe 1 bleibt unberührt. Die Einrichtung im Browser (`https://localhost:8843`, Login mit dem Admin aus Aufgabe 1, Zertifikatswarnung bestätigen):
+
+1. **Manage realms**, **Create realm**, Realm name `javascript`
+2. **Clients**, **Create client**: Client ID `javascript-client`, Name `JavaScript Client`. Client authentication **On**, Standard flow, **Direct access grants** und Service account roles anhaken. Root URL `https://localhost:3000`, Valid redirect URIs `*`, Web origins `+`
+3. Im Client, Tab **Roles**: Rollen `admin` und `user` anlegen. Tab **Client scopes**, `javascript-client-dedicated`, Tab **Scope**: **Full Scope Allowed** auf On
+4. **Users**, **Add user**: `admin` (`admin@acme.com`, Passwort `p`, Temporary Off) mit den Client-Rollen `admin`, `manage-users`, `query-users`, `realm-admin` und `view-users`. Dann `user` (`user@acme.com`, Passwort `p`, Temporary Off) mit der Client-Rolle `user`. Bei beiden muss "Required user actions" leer sein
+5. **Realm settings**: Tab Sessions, SSO Session Idle `1 Hours`. Tab Tokens, Access Token Lifespan und Access Token Lifespan For Implicit Flow `30 Minutes`. Jeweils **Save** und danach prüfen, ob der Wert wirklich gespeichert ist
+6. **Client Secret:** Clients, `javascript-client`, Tab Credentials, Client Secret. Den Wert in die `.env` im Projektordner schreiben (`CLIENT_SECRET=...`, ohne Leerzeichen um das `=`). Die `.env` ist nicht im Repository
+7. **Prüfen:** Im Browser `https://localhost:8843/realms/javascript/.well-known/openid-configuration` zeigt JSON. Dann mit dem Server: `POST https://localhost:3000/auth/token` mit `{ "username": "admin", "password": "p" }` liefert `expires_in` 1800. Im Token steht die Rolle unter `resource_access.javascript-client.roles`
+
+Bruno braucht ein Environment `rezept` mit vier Variablen (Werte nicht im Repository): `clientId` (`javascript-client`), `username` (`admin`), `clientSecret` (Secret aus Keycloak, als Secret markieren) und `password` (`p`, als Secret markieren). Bei jeder Variable muss der **Haken vor dem Namen** gesetzt sein, sonst ist sie ausgeschaltet.
 
 ## Beispiele des Dozenten (hono.zip und drizzle.zip vom 9.11.)
 
@@ -162,8 +190,8 @@ Was die `hono.zip` hat und wie weit wir sind:
 | Pino-Logging, Antwortzeit, Request-Log | ja | ja (9.11.) |
 | Security-Header, CORS, Komprimierung | ja | ja (9.11.) |
 | Fehlerformat Problem Details (RFC 9457) mit zentralem Error-Handler | ja | ja (11.11.) |
-| `/dev/db_populate` (DB neu laden), Dev-Router | ja | ja (11.11., noch ohne Rolle `admin`, nur in der Entwicklung) |
-| Keycloak mit `jose`, Token-Route, Rollen | ja | offen |
+| `/dev/db_populate` (DB neu laden), Dev-Router | ja | ja (11.11., mit Rolle `admin`, nur in der Entwicklung) |
+| Keycloak mit `jose`, Token-Route, Rollen | ja | ja (11.11., Token-Route `/auth/token`, Rollen `admin` und `user` für REST und GraphQL) |
 | Health (liveness, readiness), Prometheus | ja | offen |
 | Suche mit der Methode `QUERY`, File Upload und Download | ja | offen (Upload entfällt im Modell Rezept) |
 | Unit-Tests und Integrationstests mit Vitest | ja | offen (Sai) |
@@ -188,6 +216,7 @@ Was die `hono.zip` hat und wie weit wir sind:
 | #10 `feature/config-https` | Konfiguration in `config.toml` und HTTPS mit TLS 1.3 (HTTP/2) |
 | #11 `feature/logging-middleware` | Pino-Logging, Security-Header, CORS, Komprimierung und schwache ETags |
 | `feature/fehler-und-populate` | Problem Details als Fehlerformat, zentraler Error-Handler und `/dev/db_populate` (11.11.) |
+| `feature/keycloak` | Keycloak mit `jose`: Token-Route `/auth/token`, Rollenprüfung für REST, GraphQL und `/dev/db_populate`, Bruno mit OAuth 2 (11.11.) |
 
 ### REST-Schnittstelle
 
@@ -197,9 +226,12 @@ Server: `https://localhost:3000` (HTTPS mit selbst-signiertem Zertifikat).
 |---|---|---|
 | `GET /rest?titel&schwierigkeit&vegetarisch&seite&groesse` | 200, Array mit Titel je Rezept, 5 pro Seite (maximal 20), sortiert nach ID | 404 keine Treffer, 422 ungültige oder unbekannte Parameter (alle als Problem Details) |
 | `GET /rest/:id` | 200 mit Titel und Zutaten, Header `ETag: "<Version>"`, 304 bei passendem `If-None-Match` | 404 |
-| `POST /rest` | 201 ohne Body, Header `Location` | 400 (kein gültiges JSON), 422 (ungültige Daten, unbekannte Property, doppelte Rezeptnummer) |
-| `PUT /rest/:id` mit `If-Match: "<Version>"` | 204, Header `ETag` mit neuer Version | 400 (kein gültiges JSON), 404, 412 (falsche Form oder veraltete Version), 422, 428 (Header fehlt) |
-| `DELETE /rest/:id` | 204, immer, auch wenn es das Rezept nicht gibt | |
+| `POST /rest` | 201 ohne Body, Header `Location` | 400 (kein gültiges JSON), 401 (Token fehlt oder ungültig), 403 (Rolle fehlt), 422 (ungültige Daten, unbekannte Property, doppelte Rezeptnummer) |
+| `PUT /rest/:id` mit `If-Match: "<Version>"` | 204, Header `ETag` mit neuer Version | 400 (kein gültiges JSON), 401, 403, 404, 412 (falsche Form oder veraltete Version), 422, 428 (Header fehlt) |
+| `DELETE /rest/:id` | 204, immer, auch wenn es das Rezept nicht gibt | 401, 403 |
+| `POST /auth/token` (auch `QUERY`) mit `{ username, password }` | 200 mit `access_token`, `expires_in`, `refresh_token`, `refresh_expires_in` | 400, 401 (falsche Zugangsdaten), 422, 503 (Keycloak nicht erreichbar) |
+
+Berechtigungen: `GET` ist offen. `POST` und `PUT` brauchen die Rolle `admin` oder `user`, `DELETE` und `/dev/db_populate` die Rolle `admin`. Der Token kommt im Header `Authorization: Bearer <Token>`. Fehler sind Problem Details, bei 401 mit dem Header `WWW-Authenticate: Bearer`.
 
 Beispiel für den Body von `POST` (bei `PUT` ohne `rezeptnummer`):
 
@@ -232,9 +264,12 @@ Adresse `https://localhost:3000/graphql`, `GET` zeigt im Browser GraphiQL, `POST
 |---|---|
 | Query `rezept(id: Int!)` | das Rezept mit Titel und Zutaten, oder `null` (kein 404) |
 | Query `rezepte(suchkriterien)` | Rezepte mit `titel`, `schwierigkeit`, `vegetarisch`, `seite` (Standard 1), `groesse` (Standard 5, maximal 20), ggf. leere Liste |
-| Mutation `create(input: RezeptInput!)` | `{ id }` des neuen Rezepts |
+| Mutation `create(input: RezeptInput!)` | `{ id }` des neuen Rezepts, nur mit Token und der Rolle `admin` oder `user` |
+| Mutation `token(username, password)` | `access_token`, `expires_in`, `refresh_token`, `refresh_expires_in` (Namen wie bei Keycloak mit Unterstrich) |
 
 Fehler (ungültige Suchkriterien oder Rezeptdaten, doppelte Rezeptnummer) stehen bei GraphQL in `errors` mit `extensions.code` gleich `BAD_USER_INPUT` und den Zod-Fehlern in `extensions.details`. Der HTTP-Status ist trotzdem 200. Die Validierung nutzt dasselbe Zod-Schema wie `POST /rest`. Beispiel:
+
+Fehler bei der Anmeldung stehen ebenfalls in `errors`: `UNAUTHENTICATED` (kein gültiger Token oder falsche Zugangsdaten bei `token`), `FORBIDDEN` (Rolle fehlt) und `SERVICE_UNAVAILABLE` (Keycloak nicht erreichbar bei `token`). Die Rollenprüfung kommt in `create` **vor** der Validierung der Eingabe. Der HTTP-Status ist immer 200.
 
 ```graphql
 query {
@@ -252,15 +287,19 @@ Nach dem Anlegen eines Rezepts (`POST /rest` und Mutation `create`) geht eine Ma
 
 ### Bruno-Collection (extras/bruno/javascript)
 
-Collection `rezept` mit 43 Requests (32 REST, 10 GraphQL und 1 Dev) im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
+Collection `rezept` mit 55 Requests (37 REST, 13 GraphQL, 4 Auth und 1 Dev) im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
 
 - `REST > Suche mit ID`: GET mit ID 1, 20, 30, unbekannter und ungültiger ID, `If-None-Match` (304)
 - `REST > Suche mit Suchparameter`: 11 Requests (Alle, Seite 2, Titel, vegetarisch, ungültige Parameter mit 422, kein Treffer mit 404)
 - `REST > Neu anlegen`: POST mit zufälliger Rezeptnummer (wiederholbar), doppelte Nummer, ungültige Daten, unbekannte Property, kein JSON (400)
-- `Dev`: `DB neu laden` (`POST /dev/db_populate`), setzt die Seed-Daten zurück, steht am Ende der Collection
+- `Dev`: `DB neu laden` (`POST /dev/db_populate`, mit Token als `admin`), setzt die Seed-Daten zurück
+- `Auth`: `POST /auth/token` als `admin` und `user`, falsches Passwort (401), ohne Benutzername (422)
+- `REST > Rollen`: ohne Token (401), mit ungültigem Token (401), Anlegen als `user` (201), Löschen als `user` (403), Löschen als `admin` (204)
 - `REST > Ändern`: PUT mit `If-Match`, falsche oder fehlende Version, kaputter Header, unbekannte ID, ungültige Daten, Rezeptnummer im Body
 - `REST > Löschen`: DELETE für Rezept 50, das neu angelegte Rezept und eine unbekannte ID
 - `GraphQL`: Rezept 20, unbekannte ID (`null`), alle Rezepte, Suche nach Titel, vegetarisch und `EINFACH`, zu große Seitengröße, Mutation `create` (wiederholbar), doppelte Rezeptnummer, ungültige Daten, danach `DELETE` des neuen Rezepts über REST (Variable `graphqlId`)
+
+Authentifizierung: Die Ordner `Neu anlegen`, `Ändern`, `Löschen` und `Dev` haben OAuth 2 (Password Grant gegen Keycloak, Variablen `clientId`, `username`, `password`, `clientSecret` aus dem Environment `rezept`). Die Requests darin erben das (`auth: inherit`), Bruno holt den Token selbst. Die GraphQL-Mutationen und das Aufräumen in `GraphQL` haben OAuth 2 am Request. Die Requests im Ordner `Rollen` mit dem Benutzer `user` haben die Zugangsdaten (`user`, `p`) am Request, mit eigener `credentials_id`, damit Bruno beide Token nicht verwechselt. Die Collection-Variablen `keycloakUrl`, `realm`, `oidcTokenUrl` und `tokenUrl` stehen in `collection.bru`.
 
 Zusammenhang der Requests: `Vorhandene ID 30` merkt den ETag in der Variable `etag`, die PUT-Requests schicken ihn als `If-Match` und aktualisieren ihn nach Erfolg. `Neues Rezept` merkt die ID aus dem Header `Location` in `neueId` (für `Neu angelegtes Rezept löschen`) und die Rezeptnummer in `rezeptnummer` (für den Request mit doppelter Nummer). Jeder Request hat Assertions. Mit der Bruno-CLI 4.3.0 gegen die Seed-Daten geprüft: 32 von 32 Requests und 48 von 48 Assertions bestanden, auch beim zweiten Durchlauf. Mit dem Ordner `GraphQL` sind es 42 von 42 Requests. Die GraphQL-Requests hat Enes zusätzlich von Hand in Bruno durchlaufen (alle grün).
 
@@ -310,6 +349,12 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Fehlerformat: Problem Details (`src/problem-details.mts`, wie beim Dozenten mit `title`, `statusCode`, `detail`). Der zentrale Error-Handler in `src/app.mts` gibt 404 für unbekannte Routen, 500 für unerwartete Fehler (nur im Log, nicht in der Antwort) und `HTTPException` unverändert weiter
 - Kein gültiges JSON im Body ist 400 (Syntaxfehler), ein gültiges JSON mit falschen Daten ist 422 (Inhaltsfehler). Vorher war beides 422 (`src/rezept/rest/read-json.mts`)
 - `/dev/db_populate` gibt es nur bei `NODE_ENV=development` und `populate = true`. Das SQL läuft in zwei Verbindungen: `drop-table.sql` und `create-table.sql` mit dem normalen User in einer Transaktion, `copy-csv.sql` mit dem Admin-User (`COPY` aus Dateien braucht Rechte). Eine Rollenprüfung fehlt bis Keycloak da ist
+- Keycloak: Realm `javascript`, Client `javascript-client`, Rollen `admin` und `user` als **Client-Rollen** (im Token unter `resource_access.javascript-client.roles`). Der Server prüft den Token mit `jose` (`src/security/token-pruefen.mts`): Signatur (RS256, öffentliche Schlüssel von Keycloak per JWKS, zwischengespeichert), Aussteller, Audience `account` und Ablaufzeit. Der Token und das Secret werden nie protokolliert (der Dozent loggt in seiner `keycloak-service.mts` das Passwort, das haben wir bewusst nicht übernommen)
+- Fehlerbild: kein oder ungültiger Token ist 401 (REST mit `WWW-Authenticate: Bearer`), fehlende Rolle 403, Keycloak nicht erreichbar bei `/auth/token` 503. Ist Keycloak beim Prüfen eines Tokens nicht erreichbar und die Schlüssel noch nicht zwischengespeichert, ist das ein Fehler im Server (500, nur geloggt). Lesen funktioniert weiter
+- REST: Middleware `rolesRequired('admin', 'user')` vor dem Handler (`src/security/roles-required.mts`). GraphQL: Prüfung im Resolver von `create`, **vor** der Validierung. Beide nutzen `pruefeToken`
+- `/auth/token` nimmt `POST` und `QUERY` (wie `/dev/db_populate`), der Body ist streng validiert (`username` und `password`). Der Server holt den Token per Password Grant bei Keycloak. GraphQL hat dazu die Mutation `token`. Eine Route für den Refresh Token gibt es noch nicht
+- Das Client Secret kommt aus der `.env` (`CLIENT_SECRET`), nicht aus `config.toml`. Fehlt es, bricht der Start mit `CLIENT_SECRET in der Datei .env setzen` ab. Realm, Client und Port haben Standardwerte in `config.mts` (`javascript`, `javascript-client`, 8843), der Abschnitt `[keycloak]` in `config.toml` setzt nur den Host
+- Bruno holt den Token selbst bei Keycloak (OAuth 2 in den Ordnern), nicht über den Appserver, wie beim Dozenten
 - CI: `pnpm/action-setup` und `actions/setup-node` lesen pnpm und Node aus `devEngines` in der `package.json`, `pnpm install --frozen-lockfile`, nur lesender Zugriff (`permissions: contents: read`)
 
 ## Regeln des Dozenten
@@ -364,7 +409,7 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Zod 4: `z.strictObject` lehnt unbekannte Parameter ab, `z.stringbool()` wandelt `"true"` und `"false"` aus der Query um, `z.flattenError` liefert die Fehler für die Antwort
 - `c.req.json().catch(() => undefined)` verhindert einen Fehler 500 bei ungültigem JSON
 - `beispiele-write.mts` verändert Daten (Rezept 30 und 70, neues Rezept 1000) und nicht zweimal ausführen, die Rezeptnummer `RZ-100` ist eindeutig
-- Die `.env` ist nicht im Repository (jeder hat seine eigene, später mit eigenem Keycloak-Secret)
+- Die `.env` ist nicht im Repository (jeder hat seine eigene, mit `CLIENT_SECRET` aus dem eigenen Keycloak und `NODE_TLS_REJECT_UNAUTHORIZED=0`). Das Bruno-Environment `rezept` mit dem Secret liegt ebenfalls nur lokal
 - `nodemailer` 10.4.0 war am 8.11. erst einen Tag alt und wird von `minimumReleaseAge` abgelehnt, deshalb `nodemailer@10.3.1`. `nodemailer` 10 bringt eigene Typen mit, `@types/nodemailer` aus der `package.json` wird dadurch nicht gebraucht, stört aber nicht
 - GraphiQL ist für alle Umgebungen eingeschaltet (`graphiql: true` in `graphql.router.mts`), das soll später nur für die Entwicklung gelten
 - Bei `rezepte` werden die Zutaten pro Rezept einzeln nachgeladen (eine kleine Abfrage je Rezept, höchstens 20). Das reicht hier, kann bei Bedarf in einer Abfrage gebündelt werden
@@ -375,6 +420,13 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - GitHub Actions meldete am 9.11. bei drei Läufen `Internal server error` (Fehler bei GitHub, nicht im Code). Auf der Seite des Laufs `Re-run all jobs`
 - `key.pem` steht in der `.gitignore`: `git status` zeigt nur `certificate.crt`. Wer das Repository klont, muss `key.pem` selbst nach `src/config/tls` kopieren
 - Die Oxlint-Regel `import/max-dependencies` (höchstens 10 Imports) ist in `src/app.mts` mit `// oxlint-disable-line` an einer Zeile abgeschaltet, wie beim Dozenten in der Datei `app.mts`
+- Bruno-Environment: Eine Variable **ohne Haken** vor dem Namen ist ausgeschaltet. Im Auth-Tab des Ordners ist sie dann rot und Bruno schickt keinen Token mit. Am 11.11. waren so `clientId` und `username` unwirksam, und alle schreibenden Requests bekamen 401 nach 0 ms
+- Das Keycloak-Log (`docker compose logs keycloak --tail 15` im Ordner `keycloak`) zeigt bei jeder Ablehnung einen `LOGIN_ERROR` mit Grund: `invalid_client_credentials` (falsches Client Secret, schon vor der Prüfung des Benutzers), `invalid_user_credentials` (falsches Passwort). So lässt sich ein falsches Secret im Bruno-Environment vom Server trennen, im Server-Log taucht der Abruf von Bruno nicht auf
+- Der Admin-Benutzer hat im Token die Audience `realm-management` und `account` (wegen der Rollen `manage-users` und `realm-admin`). Der Server verlangt nur `account`, das reicht
+- PowerShell 7 reicht `\"` innerhalb von `'...'` unverändert an `curl.exe` weiter, der Body ist dann kein JSON (Server: 400). Besser den Body in eine Datei schreiben und `--data-binary "@datei"` nutzen
+- Bruno schreibt beim Anklicken eines Ordners manchmal einen leeren OAuth-2-Block in dessen `folder.bru` (am 11.11. in `GraphQL/folder.bru`). Vor jedem Commit mit `git status` prüfen und die Datei mit `git restore` verwerfen
+- In Bruno müssen Header mit Bindestrich in Klammern stehen: `res.headers['content-type']`, nicht `res.headers.content-type`
+- Die Node-Warnung zu `NODE_TLS_REJECT_UNAUTHORIZED` erscheint bei `pnpm run dev` (`node --env-file=.env`) beim ersten TLS-Zugriff, auch beim ersten Request an Keycloak
 
 ## Offen
 
@@ -386,15 +438,16 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - [x] Mail an Herrn Zimmermann ist nicht mehr nötig: `hono.zip` beantwortet beide Fragen (Hono-Version und Zertifikat)
 - [x] Aufräumen, Konfiguration mit `config.toml`, HTTPS, Pino-Logging und Middleware (9.11.)
 - [x] Problem Details als Fehlerformat, zentraler Error-Handler und `/dev/db_populate` (11.11.)
-- [ ] Als Nächstes: Keycloak (siehe unten). Danach schützt die Rolle `admin` auch `/dev/db_populate`
+- [x] Keycloak mit `jose`: Token-Route, Rollen für REST, GraphQL und `/dev/db_populate`, Bruno mit OAuth 2 (11.11., Bruno 55/55)
+- [ ] Als Nächstes: GraphQL Update und Delete, Health und Prometheus, dann Docker
 
 ### Als Nächstes (Sai)
 
-- [ ] Vitest-Integrationstests (siehe oben)
+- [ ] Vitest-Integrationstests (siehe oben), mit Token von `POST /auth/token` für die schreibenden Tests
 
 ### Danach
 
-- [ ] OIDC und OAuth 2 mit Keycloak (`jose`, Token-Route, Rollen für `POST`, `PUT`, `DELETE` und die GraphQL-Mutationen), Keycloak-Compose aus Aufgabe 1 oder `extras/compose/keycloak` der `hono.zip`
+- [ ] Refresh-Token-Route und Keycloak-Compose im Repository (aus Aufgabe 1 oder `extras/compose/keycloak` der `hono.zip`)
 - [ ] GraphQL: Update und Delete wie in der `hono.zip`
 - [ ] Health (liveness, readiness) und Prometheus-Metriken
 - [ ] Regeln in `oxlint.config.mts` ergänzen: `no-var`, `prefer-const`, `@stylistic/quotes` (single), `prefer-destructuring`. Mit `pnpm exec oxlint --rules` prüfen, ob es eine Regel gegen Enums gibt
