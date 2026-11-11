@@ -81,8 +81,35 @@ export const typeDefs = /* GraphQL */ `
         zutaten: [ZutatInput!]!
     }
 
+    # Zum Aendern wird das Rezept wie bei PUT komplett ersetzt (ohne Rezeptnummer), "version" ist die
+    # Version aus dem letzten Lesen (optimistische Synchronisation)
+    input RezeptUpdateInput {
+        id: Int!
+        version: Int!
+        bewertung: Int!
+        schwierigkeit: Schwierigkeit
+        kosten: Float!
+        zubereitungszeit: Int!
+        vegetarisch: Boolean
+        datum: String
+        quelle: String
+        schlagwoerter: [String!]
+        titel: TitelInput!
+        zutaten: [ZutatInput!]!
+    }
+
     type CreatePayload {
         id: Int!
+    }
+
+    # Neue Versionsnummer nach dem Aendern
+    type UpdatePayload {
+        version: Int!
+    }
+
+    # true, wenn das Rezept geloescht wurde, false, wenn es die ID nicht gibt
+    type DeletePayload {
+        success: Boolean!
     }
 
     type Query {
@@ -103,6 +130,10 @@ export const typeDefs = /* GraphQL */ `
     type Mutation {
         # nur mit Token und der Rolle "admin" oder "user"
         create(input: RezeptInput!): CreatePayload!
+        # nur mit Token und der Rolle "admin" oder "user"
+        update(input: RezeptUpdateInput!): UpdatePayload!
+        # nur mit Token und der Rolle "admin"
+        delete(id: Int!): DeletePayload!
         # Access Token von Keycloak holen
         token(username: String!, password: String!): TokenPayload
     }

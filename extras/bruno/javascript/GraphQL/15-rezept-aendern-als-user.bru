@@ -1,0 +1,60 @@
+meta {
+  name: Rezept aendern als user (Mutation)
+  type: graphql
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: oauth2
+}
+
+auth:oauth2 {
+  grant_type: password
+  access_token_url: {{oidcTokenUrl}}
+  refresh_token_url: 
+  username: user
+  password: p
+  client_id: {{clientId}}
+  client_secret: {{clientSecret}}
+  scope: 
+  credentials_placement: body
+  credentials_id: user
+  token_placement: header
+  token_header_prefix: Bearer
+  auto_fetch_token: true
+  auto_refresh_token: false
+}
+
+body:graphql {
+  mutation ($i: RezeptUpdateInput!) {
+    update(input: $i) {
+      version
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "i": {
+      "id": {{gqlUpdateId}},
+      "version": 0,
+      "bewertung": 5,
+      "kosten": 20,
+      "zubereitungszeit": 30,
+      "titel": { "titel": "Geaenderte GraphQL-Suppe" },
+      "zutaten": [{ "bezeichnung": "Mehl", "menge": 200, "einheit": "g" }]
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.update.version: eq 1
+}
+
+docs {
+  Aendern ersetzt das Rezept wie PUT komplett (ohne Rezeptnummer). `version` ist die Version aus dem
+  letzten Lesen, nach dem Aendern ist sie 1. Erlaubt fuer die Rollen `admin` und `user`.
+}

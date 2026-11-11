@@ -1,0 +1,45 @@
+meta {
+  name: Rezept loeschen als admin (Mutation)
+  type: graphql
+  seq: 19
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: oauth2
+}
+
+auth:oauth2 {
+  grant_type: password
+  access_token_url: {{oidcTokenUrl}}
+  refresh_token_url: 
+  username: {{username}}
+  password: {{password}}
+  client_id: {{clientId}}
+  client_secret: {{clientSecret}}
+  scope: 
+  credentials_placement: body
+  credentials_id: credentials
+  token_placement: header
+  token_header_prefix: Bearer
+  auto_fetch_token: true
+  auto_refresh_token: false
+}
+
+body:graphql {
+  mutation {
+    delete(id: {{gqlUpdateId}}) {
+      success
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.delete.success: eq true
+}
+
+docs {
+  Loescht das Rezept aus `Neues Rezept fuer Update und Delete`.
+}

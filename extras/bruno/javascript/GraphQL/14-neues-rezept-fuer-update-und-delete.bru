@@ -1,0 +1,71 @@
+meta {
+  name: Neues Rezept fuer Update und Delete (Mutation)
+  type: graphql
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: oauth2
+}
+
+auth:oauth2 {
+  grant_type: password
+  access_token_url: {{oidcTokenUrl}}
+  refresh_token_url: 
+  username: {{username}}
+  password: {{password}}
+  client_id: {{clientId}}
+  client_secret: {{clientSecret}}
+  scope: 
+  credentials_placement: body
+  credentials_id: credentials
+  token_placement: header
+  token_header_prefix: Bearer
+  auto_fetch_token: true
+  auto_refresh_token: false
+}
+
+body:graphql {
+  mutation ($i: RezeptInput!) {
+    create(input: $i) {
+      id
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "i": {
+      "rezeptnummer": "{{rezeptnummer}}",
+      "bewertung": 4,
+      "schwierigkeit": "EINFACH",
+      "kosten": 8,
+      "zubereitungszeit": 20,
+      "vegetarisch": true,
+      "titel": { "titel": "Rezept zum Aendern" },
+      "zutaten": [{ "bezeichnung": "Wasser", "menge": 1, "einheit": "l" }]
+    }
+  }
+}
+
+script:pre-request {
+  const nummer = String(Math.floor(100000 + Math.random() * 900000));
+  bru.setVar("rezeptnummer", `RZ-${nummer}`);
+}
+
+script:post-response {
+  if (res.body.data?.create?.id) {
+    bru.setVar("gqlUpdateId", res.body.data.create.id);
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.data.create.id: isNumber
+}
+
+docs {
+  Legt ein Rezept an, das die folgenden Requests aendern und loeschen. Die ID steht in `gqlUpdateId`.
+}
