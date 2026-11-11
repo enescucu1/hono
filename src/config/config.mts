@@ -55,8 +55,11 @@ const ConfigSchema = z.object({
 
     db: z.object({
         user: z.string().default('rezept'),
+        // Administrator, z.B. fuer COPY beim Neuladen der DB
+        admin: z.string().default('postgres'),
         database: z.string().default('rezept'),
         password: z.string(),
+        adminPassword: z.string().optional(),
         host: z.string().default('localhost'),
         cert: z.string().endsWith('.crt').default('config/postgresql/server.crt'),
         tlsMinVersion: z.enum(['TLSv1.3', 'TLSv1.2']).default('TLSv1.3'),
@@ -67,6 +70,8 @@ const ConfigSchema = z.object({
         poolIdleTimeoutMillis: z.number().int().min(1000).max(60_000).default(30_000),
         poolConnectionTimeoutMillis: z.number().int().min(1000).default(5000),
         // oxlint-enable no-magic-numbers
+        // /dev/db_populate: DB neu laden (nur in der Entwicklung)
+        populate: z.boolean().default(false),
     }),
 
     mail: z.object({

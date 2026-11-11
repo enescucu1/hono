@@ -27,5 +27,8 @@ body:json {
 
 assert {
   res.status: eq 422
-  res.body.details.fieldErrors.bewertung: isDefined
+  res.headers["content-type"]: contains application/problem+json
+  res.body.title: eq Unprocessable Content
+  res.body.statusCode: eq 422
+  res.body.detail.fieldErrors.bewertung: isDefined
 }

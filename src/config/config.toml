@@ -9,6 +9,10 @@ allowHTTP1 = true
 [db]
 host = "localhost"
 password = "p"
+# Passwort des Users postgres, nur zum Neuladen der DB (COPY braucht Administrationsrechte)
+adminPassword = "p"
+# /dev/db_populate laedt die DB neu, nur in der Entwicklung
+populate = true
 
 [mail]
 host = "localhost"

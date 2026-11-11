@@ -13,8 +13,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import {
+    badRequest,
+    createProblemDetails,
+    notFound,
+    preconditionFailed,
+    preconditionRequired,
+    unprocessableContent,
+} from '../../problem-details.mts';
 import { create, deleteById, update } from '../service/rezept-write.service.mts';
 import { geaendertesRezeptSchema, neuesRezeptSchema } from './rezept-schema.mts';
+import { invalidJson, readJson } from './read-json.mts';
 import { Hono } from 'hono';
 import { existsRezeptnummer } from '../service/rezept-read.service.mts';
 import { parseVersion } from './etag.mts';
@@ -24,19 +33,22 @@ export const rezeptWriteRouter = new Hono();
 
 // POST /rest
 rezeptWriteRouter.post('/', async (c) => {
-    // Bei ungueltigem JSON ist body undefined, und Zod meldet dann einen Fehler
-    const body: unknown = await c.req.json().catch(() => undefined);
+    const body = await readJson(c);
+    if (body === invalidJson) {
+        return createProblemDetails(c, badRequest, 'Der Request-Body ist kein gueltiges JSON.');
+    }
     const rezept = neuesRezeptSchema.safeParse(body);
     if (!rezept.success) {
-        return c.json(
-            { message: 'Ungueltige Rezeptdaten.', details: z.flattenError(rezept.error) },
-            422,
-        );
+        return createProblemDetails(c, unprocessableContent, z.flattenError(rezept.error));
     }
 
     const { rezeptnummer } = rezept.data;
     if (await existsRezeptnummer(rezeptnummer)) {
-        return c.json({ message: `Die Rezeptnummer ${rezeptnummer} existiert bereits.` }, 422);
+        return createProblemDetails(
+            c,
+            unprocessableContent,
+            `Die Rezeptnummer ${rezeptnummer} existiert bereits.`,
+        );
     }
 
     const id = await create(rezept.data);
@@ -47,35 +59,47 @@ rezeptWriteRouter.post('/', async (c) => {
 rezeptWriteRouter.put('/:id', async (c) => {
     const id = Number(c.req.param('id'));
     if (!Number.isInteger(id)) {
-        return c.json({ message: 'Die ID muss eine ganze Zahl sein.' }, 404);
+        return createProblemDetails(c, notFound, 'Die ID muss eine ganze Zahl sein.');
     }
 
     const ifMatch = c.req.header('If-Match');
     if (ifMatch === undefined) {
-        return c.json({ message: 'Der Header If-Match mit der Version fehlt.' }, 428);
+        return createProblemDetails(
+            c,
+            preconditionRequired,
+            'Der Header If-Match mit der Version fehlt.',
+        );
     }
     // If-Match: "<Versionsnummer>", z.B. "0" (ETag aus der Antwort auf GET /rest/:id)
     const version = parseVersion(ifMatch);
     if (version === undefined) {
-        return c.json({ message: 'Der Header If-Match muss die Form "0" haben.' }, 412);
+        return createProblemDetails(
+            c,
+            preconditionFailed,
+            'Der Header If-Match muss die Form "0" haben.',
+        );
     }
 
-    const body: unknown = await c.req.json().catch(() => undefined);
+    const body = await readJson(c);
+    if (body === invalidJson) {
+        return createProblemDetails(c, badRequest, 'Der Request-Body ist kein gueltiges JSON.');
+    }
     const rezept = geaendertesRezeptSchema.safeParse(body);
     if (!rezept.success) {
-        return c.json(
-            { message: 'Ungueltige Rezeptdaten.', details: z.flattenError(rezept.error) },
-            422,
-        );
+        return createProblemDetails(c, unprocessableContent, z.flattenError(rezept.error));
     }
 
     const result = await update(id, version, rezept.data);
     switch (result.status) {
         case 'not-found': {
-            return c.json({ message: `Kein Rezept mit der ID ${id} gefunden.` }, 404);
+            return createProblemDetails(c, notFound, `Kein Rezept mit der ID ${id} gefunden.`);
         }
         case 'version-outdated': {
-            return c.json({ message: 'Das Rezept wurde zwischenzeitlich geaendert.' }, 412);
+            return createProblemDetails(
+                c,
+                preconditionFailed,
+                'Das Rezept wurde zwischenzeitlich geaendert.',
+            );
         }
         default: {
             return c.body(null, 204, { ETag: `"${result.version}"` });
