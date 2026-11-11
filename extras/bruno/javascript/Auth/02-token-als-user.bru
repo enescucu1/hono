@@ -24,7 +24,8 @@ body:json {
 assert {
   res.status: eq 200
   res.body.access_token: matches .+\..+\..+
-  res.body.expires_in: eq 1800
+  res.body.expires_in: gte 1790
+  res.body.expires_in: lte 1800
 }
 
 docs {

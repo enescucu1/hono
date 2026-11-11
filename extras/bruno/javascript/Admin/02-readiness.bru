@@ -1,0 +1,22 @@
+meta {
+  name: Readiness
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/health/readiness
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.headers['content-type']: contains application/json
+  res.body.status: eq up
+}
+
+docs {
+  Der Server ist bereit: die Datenbank antwortet (`select 1`). Ist die DB nicht erreichbar,
+  antwortet der Server mit 503 als Problem Details.
+}
