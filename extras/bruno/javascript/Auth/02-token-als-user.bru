@@ -1,0 +1,32 @@
+meta {
+  name: Token als user
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{tokenUrl}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "username": "user",
+    "password": "p"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.access_token: matches .+\..+\..+
+  res.body.expires_in: eq 1800
+}
+
+docs {
+  Der Server holt den Access Token bei Keycloak (`POST /auth/token`, der Dozent nutzt die Methode QUERY).
+}

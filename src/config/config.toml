@@ -24,3 +24,8 @@ dir = "./log"
 level = "debug"
 # lesbare Ausgabe in der Konsole (zusaetzlich zur Log-Datei)
 pretty = true
+
+[keycloak]
+# Realm, Client und Port stehen als Standardwerte in config.mts (javascript, javascript-client, 8843).
+# Das Client Secret kommt als CLIENT_SECRET in die Datei .env.
+host = "localhost"

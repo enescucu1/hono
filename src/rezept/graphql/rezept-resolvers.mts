@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import { type Rolle, pruefeToken } from '../../security/token-pruefen.mts';
 import {
     existsRezeptnummer,
     find,
@@ -23,6 +24,8 @@ import { GraphQLError } from 'graphql';
 import { create } from '../service/rezept-write.service.mts';
 import { neuesRezeptSchema } from '../rest/rezept-schema.mts';
 import { schwierigkeitsgrad } from '../../db/schema.mts';
+import { token } from '../../security/keycloak-service.mts';
+import { unauthorized } from '../../problem-details.mts';
 import { z } from 'zod';
 
 const standardGroesse = 5;
@@ -56,6 +59,22 @@ const ohneNull = (wert: unknown): unknown => {
 const badUserInput = (message: string, details?: unknown) =>
     new GraphQLError(message, { extensions: { code: 'BAD_USER_INPUT', details } });
 
+// Bei GraphQL ist der HTTP-Status immer 200, Fehler stehen in "errors" mit einem Code
+const graphqlFehler = (message: string, code: string) =>
+    new GraphQLError(message, { extensions: { code } });
+
+// Request ist der Fetch-Request aus dem Kontext von Yoga
+type GraphqlContext = Readonly<{ request: Request }>;
+
+// Token und Rolle pruefen: UNAUTHENTICATED (kein gueltiger Token) oder FORBIDDEN (Rolle fehlt)
+const rolesRequired = async ({ request }: GraphqlContext, ...rollen: readonly Rolle[]) => {
+    const pruefung = await pruefeToken(request.headers.get('Authorization'), ...rollen);
+    if (!pruefung.ok) {
+        const code = pruefung.status === unauthorized ? 'UNAUTHENTICATED' : 'FORBIDDEN';
+        throw graphqlFehler(pruefung.detail, code);
+    }
+};
+
 type RezeptParent = Readonly<{ id: number }>;
 
 export const resolvers = {
@@ -80,7 +99,14 @@ export const resolvers = {
     },
 
     Mutation: {
-        create: async (_parent: unknown, args: Readonly<{ input: unknown }>) => {
+        create: async (
+            _parent: unknown,
+            args: Readonly<{ input: unknown }>,
+            context: GraphqlContext,
+        ) => {
+            // zuerst die Berechtigung, dann erst die Eingabe
+            await rolesRequired(context, 'admin', 'user');
+
             const rezept = neuesRezeptSchema.safeParse(ohneNull(args.input));
             if (!rezept.success) {
                 throw badUserInput('Ungueltige Rezeptdaten.', z.flattenError(rezept.error));
@@ -92,6 +118,27 @@ export const resolvers = {
             }
 
             return { id: await create(rezept.data) };
+        },
+
+        token: async (
+            _parent: unknown,
+            { username, password }: Readonly<{ username: string; password: string }>,
+        ) => {
+            const result = await token(username, password);
+            switch (result.status) {
+                case 'ungueltig': {
+                    throw graphqlFehler(
+                        'Benutzername oder Passwort sind falsch.',
+                        'UNAUTHENTICATED',
+                    );
+                }
+                case 'nicht-erreichbar': {
+                    throw graphqlFehler('Keycloak ist nicht erreichbar.', 'SERVICE_UNAVAILABLE');
+                }
+                default: {
+                    return result.token;
+                }
+            }
         },
     },
 };

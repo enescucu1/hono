@@ -1,0 +1,39 @@
+meta {
+  name: Neu anlegen mit ungueltigem Token
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/rest
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer kein.gueltiger.token
+}
+
+body:json {
+  {
+    "rezeptnummer": "{{rezeptnummer}}",
+    "bewertung": 4,
+    "schwierigkeit": "MITTEL",
+    "kosten": 12.5,
+    "zubereitungszeit": 40,
+    "vegetarisch": true,
+    "titel": { "titel": "Rollentest" },
+    "zutaten": [{ "bezeichnung": "Wasser", "menge": 1, "einheit": "l" }]
+  }
+}
+
+script:pre-request {
+  const nummer = String(Math.floor(100000 + Math.random() * 900000));
+  bru.setVar("rezeptnummer", `RZ-${nummer}`);
+}
+
+assert {
+  res.status: eq 401
+  res.body.statusCode: eq 401
+}

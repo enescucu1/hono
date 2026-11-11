@@ -1,0 +1,25 @@
+meta {
+  name: Token mit falschem Passwort (Mutation)
+  type: graphql
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation {
+    token(username: "admin", password: "falsch") {
+      access_token
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.errors[0].extensions.code: eq UNAUTHENTICATED
+  res.body.data.token: isNull
+}

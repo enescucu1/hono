@@ -1,0 +1,33 @@
+meta {
+  name: Token mit falschem Passwort
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{tokenUrl}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "username": "admin",
+    "password": "falsch"
+  }
+}
+
+assert {
+  res.status: eq 401
+  res.headers['content-type']: contains application/problem+json
+  res.body.title: eq Unauthorized
+  res.body.statusCode: eq 401
+}
+
+docs {
+  Der Server holt den Access Token bei Keycloak (`POST /auth/token`, der Dozent nutzt die Methode QUERY).
+}

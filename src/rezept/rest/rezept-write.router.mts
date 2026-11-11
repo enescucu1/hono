@@ -27,12 +27,13 @@ import { invalidJson, readJson } from './read-json.mts';
 import { Hono } from 'hono';
 import { existsRezeptnummer } from '../service/rezept-read.service.mts';
 import { parseVersion } from './etag.mts';
+import { rolesRequired } from '../../security/roles-required.mts';
 import { z } from 'zod';
 
 export const rezeptWriteRouter = new Hono();
 
-// POST /rest
-rezeptWriteRouter.post('/', async (c) => {
+// POST /rest, nur mit gueltigem Token und der Rolle "admin" oder "user"
+rezeptWriteRouter.post('/', rolesRequired('admin', 'user'), async (c) => {
     const body = await readJson(c);
     if (body === invalidJson) {
         return createProblemDetails(c, badRequest, 'Der Request-Body ist kein gueltiges JSON.');
@@ -56,7 +57,7 @@ rezeptWriteRouter.post('/', async (c) => {
 });
 
 // PUT /rest/:id
-rezeptWriteRouter.put('/:id', async (c) => {
+rezeptWriteRouter.put('/:id', rolesRequired('admin', 'user'), async (c) => {
     const id = Number(c.req.param('id'));
     if (!Number.isInteger(id)) {
         return createProblemDetails(c, notFound, 'Die ID muss eine ganze Zahl sein.');
@@ -108,7 +109,7 @@ rezeptWriteRouter.put('/:id', async (c) => {
 });
 
 // DELETE /rest/:id, immer 204 (auch wenn es das Rezept nicht gibt)
-rezeptWriteRouter.delete('/:id', async (c) => {
+rezeptWriteRouter.delete('/:id', rolesRequired('admin'), async (c) => {
     const id = Number(c.req.param('id'));
     if (Number.isInteger(id)) {
         await deleteById(id);

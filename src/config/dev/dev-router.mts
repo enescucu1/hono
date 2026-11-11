@@ -15,15 +15,16 @@
 
 import { Hono } from 'hono';
 import { populate } from './db-populate.mts';
+import { rolesRequired } from '../../security/roles-required.mts';
 
 /**
  * Router für die Entwicklung, z.B. Neuladen der DB. Er wird nur im Development-Modus eingebunden.
  * QUERY wie beim Dozenten, zusätzlich POST (Bruno).
- * Der Schutz mit der Rolle "admin" kommt mit Keycloak.
+ * Nur mit gültigem Token und der Rolle "admin".
  */
 export const devRouter = new Hono();
 
-devRouter.on(['QUERY', 'POST'], '/db_populate', async (c) => {
+devRouter.on(['QUERY', 'POST'], '/db_populate', rolesRequired('admin'), async (c) => {
     await populate();
     return c.json({ db_populate: 'ok' });
 });
