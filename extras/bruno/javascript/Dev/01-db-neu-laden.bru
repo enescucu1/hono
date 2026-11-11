@@ -1,0 +1,22 @@
+meta {
+  name: DB neu laden
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/dev/db_populate
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.db_populate: eq ok
+}
+
+docs {
+  Löscht die Tabellen, legt sie neu an und lädt die CSV-Dateien (Seed-Daten). Nur in der Entwicklung
+  (`NODE_ENV=development` und `populate = true` in `config.toml`). Der Dozent nutzt dafür die HTTP-Methode QUERY,
+  der Server akzeptiert beides. Danach sind Rezept 30 und 70 wieder im Ausgangszustand.
+}

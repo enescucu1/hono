@@ -1,5 +1,5 @@
 meta {
-  name: Neues Rezept ohne JSON im Body
+  name: Neues Rezept ohne JSON im Body (400)
   type: http
   seq: 5
 }
@@ -11,7 +11,7 @@ post {
 }
 
 headers {
-  Content-Type: application/json
+  Content-Type: text/plain
 }
 
 body:text {
@@ -19,5 +19,11 @@ body:text {
 }
 
 assert {
-  res.status: eq 422
+  res.status: eq 400
+  res.body.title: eq Bad Request
+}
+
+docs {
+  Der Body ist kein JSON. Der Header ist text/plain, weil der HTTP-Client von Bruno bei application/json einen
+  ungueltigen Text selbst als JSON-String verpackt, dann waere der Body gueltiges JSON und die Antwort 422.
 }

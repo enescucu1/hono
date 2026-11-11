@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import { createProblemDetails, notFound, unprocessableContent } from '../../problem-details.mts';
 import { find, findById } from '../service/rezept-read.service.mts';
 import { Hono } from 'hono';
 import { parseVersion } from './etag.mts';
@@ -25,15 +26,12 @@ export const rezeptGetRouter = new Hono();
 rezeptGetRouter.get('/', async (c) => {
     const kriterien = suchkriterienSchema.safeParse(c.req.query());
     if (!kriterien.success) {
-        return c.json(
-            { message: 'Ungueltige Suchkriterien.', details: z.flattenError(kriterien.error) },
-            422,
-        );
+        return createProblemDetails(c, unprocessableContent, z.flattenError(kriterien.error));
     }
 
     const rezepte = await find(kriterien.data);
     if (rezepte.length === 0) {
-        return c.json({ message: 'Keine Rezepte gefunden.' }, 404);
+        return createProblemDetails(c, notFound, 'Keine Rezepte gefunden.');
     }
     return c.json(rezepte, 200);
 });
@@ -42,12 +40,12 @@ rezeptGetRouter.get('/', async (c) => {
 rezeptGetRouter.get('/:id', async (c) => {
     const id = Number(c.req.param('id'));
     if (!Number.isInteger(id)) {
-        return c.json({ message: 'Die ID muss eine ganze Zahl sein.' }, 404);
+        return createProblemDetails(c, notFound, 'Die ID muss eine ganze Zahl sein.');
     }
 
     const rezept = await findById(id);
     if (rezept === undefined) {
-        return c.json({ message: `Kein Rezept mit der ID ${id} gefunden.` }, 404);
+        return createProblemDetails(c, notFound, `Kein Rezept mit der ID ${id} gefunden.`);
     }
 
     // ETag: Versionsnummer in Anfuehrungszeichen, z.B. "0"
