@@ -14,19 +14,25 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import { type Rolle, pruefeToken } from '../../security/token-pruefen.mts';
+import { create, deleteById, update } from '../service/rezept-write.service.mts';
 import {
     existsRezeptnummer,
     find,
     findById,
     findZutaten,
 } from '../service/rezept-read.service.mts';
+import { geaendertesRezeptSchema, neuesRezeptSchema } from '../rest/rezept-schema.mts';
 import { GraphQLError } from 'graphql';
-import { create } from '../service/rezept-write.service.mts';
-import { neuesRezeptSchema } from '../rest/rezept-schema.mts';
 import { schwierigkeitsgrad } from '../../db/schema.mts';
 import { token } from '../../security/keycloak-service.mts';
 import { unauthorized } from '../../problem-details.mts';
 import { z } from 'zod';
+
+// Eingabe bei update: das geaenderte Rezept (ohne Rezeptnummer) mit ID und Version
+const rezeptUpdateSchema = geaendertesRezeptSchema.extend({
+    id: z.int().positive(),
+    version: z.int().min(0),
+});
 
 const standardGroesse = 5;
 const maxGroesse = 20;
@@ -118,6 +124,42 @@ export const resolvers = {
             }
 
             return { id: await create(rezept.data) };
+        },
+
+        update: async (
+            _parent: unknown,
+            args: Readonly<{ input: unknown }>,
+            context: GraphqlContext,
+        ) => {
+            await rolesRequired(context, 'admin', 'user');
+
+            const input = rezeptUpdateSchema.safeParse(ohneNull(args.input));
+            if (!input.success) {
+                throw badUserInput('Ungueltige Rezeptdaten.', z.flattenError(input.error));
+            }
+
+            const { id, version, ...rezept } = input.data;
+            const result = await update(id, version, rezept);
+            switch (result.status) {
+                case 'not-found': {
+                    throw badUserInput(`Kein Rezept mit der ID ${id} gefunden.`);
+                }
+                case 'version-outdated': {
+                    throw badUserInput('Das Rezept wurde zwischenzeitlich geaendert.');
+                }
+                default: {
+                    return { version: result.version };
+                }
+            }
+        },
+
+        delete: async (
+            _parent: unknown,
+            { id }: Readonly<{ id: number }>,
+            context: GraphqlContext,
+        ) => {
+            await rolesRequired(context, 'admin');
+            return { success: (await deleteById(id)) > 0 };
         },
 
         token: async (

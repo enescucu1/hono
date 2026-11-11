@@ -1,0 +1,42 @@
+meta {
+  name: Rezept aendern ohne Token (Mutation)
+  type: graphql
+  seq: 17
+}
+
+post {
+  url: {{baseUrl}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation ($i: RezeptUpdateInput!) {
+    update(input: $i) {
+      version
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "i": {
+      "id": {{gqlUpdateId}},
+      "version": 1,
+      "bewertung": 5,
+      "kosten": 20,
+      "zubereitungszeit": 30,
+      "titel": { "titel": "Geaenderte GraphQL-Suppe" },
+      "zutaten": [{ "bezeichnung": "Mehl", "menge": 200, "einheit": "g" }]
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.errors[0].extensions.code: eq UNAUTHENTICATED
+}
+
+docs {
+  Ohne Token kommt `UNAUTHENTICATED`, die Pruefung der Rolle steht vor der Validierung.
+}

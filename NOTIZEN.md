@@ -104,6 +104,7 @@ Token und Rollen (neu seit dem 11.11., Bruno-Ordner `Auth` und `REST > Rollen`):
 - [ ] `POST /rest` als `user`: 201. `DELETE /rest/:id` als `user`: 403. `DELETE` als `admin`: 204
 - [ ] GraphQL `create` ohne Token: `errors[0].extensions.code` gleich `UNAUTHENTICATED`. Mutation `token` mit `admin`: `data.token.access_token`
 - [ ] `POST /dev/db_populate` ohne Token: 401, als `user`: 403, als `admin`: 200
+- [ ] GraphQL `update` als `user`: `data.update.version` ist 1. Mit alter Version noch einmal: `BAD_USER_INPUT`. `delete` als `user`: `FORBIDDEN`, als `admin`: `success` ist `true`, danach `false`
 
 ## Projekt einrichten (für Sai)
 
@@ -184,7 +185,7 @@ Was die `hono.zip` hat und wie weit wir sind:
 
 | Teil | Dozent | Wir |
 |---|---|---|
-| REST, GraphQL, Mail, ETag | ja | ja (Update und Delete bei GraphQL fehlen) |
+| REST, GraphQL, Mail, ETag | ja | ja |
 | HTTPS mit HTTP/2 und TLS 1.3 | ja | ja (9.11.) |
 | Konfiguration in `config.toml` (`c12` und Zod) | ja | ja (9.11.) |
 | Pino-Logging, Antwortzeit, Request-Log | ja | ja (9.11.) |
@@ -217,6 +218,7 @@ Was die `hono.zip` hat und wie weit wir sind:
 | #11 `feature/logging-middleware` | Pino-Logging, Security-Header, CORS, Komprimierung und schwache ETags |
 | `feature/fehler-und-populate` | Problem Details als Fehlerformat, zentraler Error-Handler und `/dev/db_populate` (11.11.) |
 | `feature/keycloak` | Keycloak mit `jose`: Token-Route `/auth/token`, Rollenprüfung für REST, GraphQL und `/dev/db_populate`, Bruno mit OAuth 2 (11.11.) |
+| `feature/graphql-update-delete` | GraphQL-Mutationen `update` (Rolle `admin` oder `user`) und `delete` (Rolle `admin`) mit Bruno (11.11.) |
 
 ### REST-Schnittstelle
 
@@ -265,11 +267,15 @@ Adresse `https://localhost:3000/graphql`, `GET` zeigt im Browser GraphiQL, `POST
 | Query `rezept(id: Int!)` | das Rezept mit Titel und Zutaten, oder `null` (kein 404) |
 | Query `rezepte(suchkriterien)` | Rezepte mit `titel`, `schwierigkeit`, `vegetarisch`, `seite` (Standard 1), `groesse` (Standard 5, maximal 20), ggf. leere Liste |
 | Mutation `create(input: RezeptInput!)` | `{ id }` des neuen Rezepts, nur mit Token und der Rolle `admin` oder `user` |
+| Mutation `update(input: RezeptUpdateInput!)` | `{ version }`, die neue Versionsnummer. Ersetzt das Rezept wie `PUT` komplett (ohne `rezeptnummer`), nur mit Token und der Rolle `admin` oder `user` |
+| Mutation `delete(id: Int!)` | `{ success }`, `true` wenn gelöscht, `false` wenn es die ID nicht gibt (REST antwortet bei `DELETE` immer mit 204). Nur mit Token und der Rolle `admin` |
 | Mutation `token(username, password)` | `access_token`, `expires_in`, `refresh_token`, `refresh_expires_in` (Namen wie bei Keycloak mit Unterstrich) |
 
 Fehler (ungültige Suchkriterien oder Rezeptdaten, doppelte Rezeptnummer) stehen bei GraphQL in `errors` mit `extensions.code` gleich `BAD_USER_INPUT` und den Zod-Fehlern in `extensions.details`. Der HTTP-Status ist trotzdem 200. Die Validierung nutzt dasselbe Zod-Schema wie `POST /rest`. Beispiel:
 
 Fehler bei der Anmeldung stehen ebenfalls in `errors`: `UNAUTHENTICATED` (kein gültiger Token oder falsche Zugangsdaten bei `token`), `FORBIDDEN` (Rolle fehlt) und `SERVICE_UNAVAILABLE` (Keycloak nicht erreichbar bei `token`). Die Rollenprüfung kommt in `create` **vor** der Validierung der Eingabe. Der HTTP-Status ist immer 200.
+
+Beim `update` gelten dieselben Regeln wie bei `PUT` mit `If-Match`: `input.version` ist die Version aus dem letzten Lesen. Eine veraltete Version (`Das Rezept wurde zwischenzeitlich geaendert.`) und eine unbekannte ID (`Kein Rezept mit der ID ... gefunden.`) liefern `BAD_USER_INPUT` in `errors`. Falsche Typen oder unbekannte Felder im `input` lehnt GraphQL selbst ab (HTTP-Status 400 von Yoga, noch vor den Resolvern), Wertebereiche prüft Zod (`BAD_USER_INPUT` mit `details`).
 
 ```graphql
 query {
@@ -287,7 +293,7 @@ Nach dem Anlegen eines Rezepts (`POST /rest` und Mutation `create`) geht eine Ma
 
 ### Bruno-Collection (extras/bruno/javascript)
 
-Collection `rezept` mit 55 Requests (37 REST, 13 GraphQL, 4 Auth und 1 Dev) im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
+Collection `rezept` mit 62 Requests (37 REST, 20 GraphQL, 4 Auth und 1 Dev) im Stil der Collection `patient` aus Aufgabe 1. Öffnen in Bruno: **Open Collection** und den Ordner `extras\bruno\javascript` wählen. Voraussetzung: PostgreSQL und `pnpm run dev` laufen. Die Adresse steht in der Collection-Variable `baseUrl` (`http://localhost:3000`), eine Environment ist nicht nötig.
 
 - `REST > Suche mit ID`: GET mit ID 1, 20, 30, unbekannter und ungültiger ID, `If-None-Match` (304)
 - `REST > Suche mit Suchparameter`: 11 Requests (Alle, Seite 2, Titel, vegetarisch, ungültige Parameter mit 422, kein Treffer mit 404)
@@ -297,6 +303,7 @@ Collection `rezept` mit 55 Requests (37 REST, 13 GraphQL, 4 Auth und 1 Dev) im S
 - `REST > Rollen`: ohne Token (401), mit ungültigem Token (401), Anlegen als `user` (201), Löschen als `user` (403), Löschen als `admin` (204)
 - `REST > Ändern`: PUT mit `If-Match`, falsche oder fehlende Version, kaputter Header, unbekannte ID, ungültige Daten, Rezeptnummer im Body
 - `REST > Löschen`: DELETE für Rezept 50, das neu angelegte Rezept und eine unbekannte ID
+- `GraphQL`: Mutationen `update` und `delete` (Requests 14 bis 20): Rezept anlegen, als `user` ändern (Version 1), mit veralteter Version (`BAD_USER_INPUT`), ohne Token (`UNAUTHENTICATED`), Löschen als `user` (`FORBIDDEN`), als `admin` (`success: true`) und noch einmal (`false`)
 - `GraphQL`: Rezept 20, unbekannte ID (`null`), alle Rezepte, Suche nach Titel, vegetarisch und `EINFACH`, zu große Seitengröße, Mutation `create` (wiederholbar), doppelte Rezeptnummer, ungültige Daten, danach `DELETE` des neuen Rezepts über REST (Variable `graphqlId`)
 
 Authentifizierung: Die Ordner `Neu anlegen`, `Ändern`, `Löschen` und `Dev` haben OAuth 2 (Password Grant gegen Keycloak, Variablen `clientId`, `username`, `password`, `clientSecret` aus dem Environment `rezept`). Die Requests darin erben das (`auth: inherit`), Bruno holt den Token selbst. Die GraphQL-Mutationen und das Aufräumen in `GraphQL` haben OAuth 2 am Request. Die Requests im Ordner `Rollen` mit dem Benutzer `user` haben die Zugangsdaten (`user`, `p`) am Request, mit eigener `credentials_id`, damit Bruno beide Token nicht verwechselt. Die Collection-Variablen `keycloakUrl`, `realm`, `oidcTokenUrl` und `tokenUrl` stehen in `collection.bru`.
@@ -352,6 +359,7 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Keycloak: Realm `javascript`, Client `javascript-client`, Rollen `admin` und `user` als **Client-Rollen** (im Token unter `resource_access.javascript-client.roles`). Der Server prüft den Token mit `jose` (`src/security/token-pruefen.mts`): Signatur (RS256, öffentliche Schlüssel von Keycloak per JWKS, zwischengespeichert), Aussteller, Audience `account` und Ablaufzeit. Der Token und das Secret werden nie protokolliert (der Dozent loggt in seiner `keycloak-service.mts` das Passwort, das haben wir bewusst nicht übernommen)
 - Fehlerbild: kein oder ungültiger Token ist 401 (REST mit `WWW-Authenticate: Bearer`), fehlende Rolle 403, Keycloak nicht erreichbar bei `/auth/token` 503. Ist Keycloak beim Prüfen eines Tokens nicht erreichbar und die Schlüssel noch nicht zwischengespeichert, ist das ein Fehler im Server (500, nur geloggt). Lesen funktioniert weiter
 - REST: Middleware `rolesRequired('admin', 'user')` vor dem Handler (`src/security/roles-required.mts`). GraphQL: Prüfung im Resolver von `create`, **vor** der Validierung. Beide nutzen `pruefeToken`
+- GraphQL `update` und `delete`: `update` ersetzt das Rezept komplett und nutzt denselben Service wie `PUT` (`rezept-write.service.mts`, Version prüfen und hochzählen). Beim Dozenten ist `update` ein teilweises Ändern, das haben wir nicht übernommen, damit REST und GraphQL gleich arbeiten. `delete` meldet mit `success`, ob es das Rezept gab
 - `/auth/token` nimmt `POST` und `QUERY` (wie `/dev/db_populate`), der Body ist streng validiert (`username` und `password`). Der Server holt den Token per Password Grant bei Keycloak. GraphQL hat dazu die Mutation `token`. Eine Route für den Refresh Token gibt es noch nicht
 - Das Client Secret kommt aus der `.env` (`CLIENT_SECRET`), nicht aus `config.toml`. Fehlt es, bricht der Start mit `CLIENT_SECRET in der Datei .env setzen` ab. Realm, Client und Port haben Standardwerte in `config.mts` (`javascript`, `javascript-client`, 8843), der Abschnitt `[keycloak]` in `config.toml` setzt nur den Host
 - Bruno holt den Token selbst bei Keycloak (OAuth 2 in den Ordnern), nicht über den Appserver, wie beim Dozenten
@@ -439,7 +447,8 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - [x] Aufräumen, Konfiguration mit `config.toml`, HTTPS, Pino-Logging und Middleware (9.11.)
 - [x] Problem Details als Fehlerformat, zentraler Error-Handler und `/dev/db_populate` (11.11.)
 - [x] Keycloak mit `jose`: Token-Route, Rollen für REST, GraphQL und `/dev/db_populate`, Bruno mit OAuth 2 (11.11., Bruno 55/55)
-- [ ] Als Nächstes: GraphQL Update und Delete, Health und Prometheus, dann Docker
+- [x] GraphQL `update` und `delete` mit Rollen (11.11., Bruno 62/62)
+- [ ] Als Nächstes: Health und Prometheus, dann Docker
 
 ### Als Nächstes (Sai)
 
@@ -448,7 +457,6 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 ### Danach
 
 - [ ] Refresh-Token-Route und Keycloak-Compose im Repository (aus Aufgabe 1 oder `extras/compose/keycloak` der `hono.zip`)
-- [ ] GraphQL: Update und Delete wie in der `hono.zip`
 - [ ] Health (liveness, readiness) und Prometheus-Metriken
 - [ ] Regeln in `oxlint.config.mts` ergänzen: `no-var`, `prefer-const`, `@stylistic/quotes` (single), `prefer-destructuring`. Mit `pnpm exec oxlint --rules` prüfen, ob es eine Regel gegen Enums gibt
 - [ ] Docker-Image (Dockerfile) und Docker Compose, dabei auch einen Compose-Ordner für Mailpit ins Repository
