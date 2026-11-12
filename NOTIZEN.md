@@ -112,7 +112,7 @@ Token und Rollen (neu seit dem 11.11., Bruno-Ordner `Auth` und `REST > Rollen`):
 
 Pfad wie bei Enes `C:\workspace\javascript\...` (nicht in einem Pfad mit Leerzeichen).
 
-1. **Voraussetzungen:** Docker Desktop, Git, Node 26 (aus der `Zimmermann.zip` in ILIAS, `C:\Zimmermann\node`), pnpm mindestens 12.18 (`pnpm self-update` **außerhalb** des Projektordners ausführen, sonst bricht `pmOnFail: error` ab), Bun optional. Node 26.10 und Bun 1.4.2 reichen, es gibt nur Warnungen
+1. **Voraussetzungen:** Docker Desktop, Git, Node mindestens 26.13 (ZIP, entpackt in `C:\Zimmermann\node`, siehe "Node und pnpm aktualisieren"), pnpm mindestens 12.19 (Skript des Dozenten mit `$env:PNPM_VERSION = 'next-12'`, am 11.11. war das 12.20.0), Bun optional. Mit älteren Versionen laufen Projekt und Tests, es erscheint nur eine Warnung
 2. **Klonen:** `git clone https://github.com/enescucu1/hono.git`, dann `cd hono`
 3. **Pakete:** `pnpm i`. Den Hinweis "Agent skills awaiting approval: drizzle-kit" ignorieren, kein `pnpm approve`
 4. **`.env` anlegen** (nicht im Repository, jeder hat seine eigene). Inhalt nach dem Vorbild von `ReadMe.drizzle.md` und `ReadMe.vscode.md`:
@@ -142,6 +142,14 @@ Pfad wie bei Enes `C:\workspace\javascript\...` (nicht in einem Pfad mit Leerzei
 6. **Schlüssel für HTTPS:** `key.pem` aus der `hono.zip` des Dozenten (`src/config/tls/key.pem`) in das Verzeichnis `src/config/tls` des Projekts kopieren. Das Zertifikat `certificate.crt` liegt schon im Repository
 7. **Keycloak** (seit dem 11.11. nötig für alle schreibenden Requests): Abschnitt "Keycloak einrichten" unten durcharbeiten, dann in der `.env` die Zeile `CLIENT_SECRET=...` ergänzen. Ohne diese Zeile startet der Appserver nicht
 8. **Prüfen:** `pnpm run lint` und `pnpm run tsc` ohne Fehler, dann `pnpm run dev` und im Browser `https://localhost:3000/rest/20` (die Zertifikatswarnung bestätigen)
+
+## Node und pnpm aktualisieren
+
+Seit dem 11.11. verlangt das Projekt Node `^26.13.0` und pnpm `^12.19.0` (`devEngines` und `engines` in `package.json`, am 11.11. mit Node 26.13.1 und pnpm 12.20.0 getestet). Das Lockfile hat das Format v13 (`lockfile: format: v13` in `pnpm-workspace.yaml`, Anleitung des Dozenten im ILIAS-Forum).
+
+1. **Node** (ZIP, kein Installer): Alle Terminals und VS Code schließen. Das ZIP `node-vX-win-x64.zip` von `https://nodejs.org/dist/vX/` laden und den SHA-256-Wert mit `SHASUMS256.txt` aus demselben Ordner vergleichen (`Get-FileHash`). Den Ordner `C:\Zimmermann\node` umbenennen (Sicherung), das ZIP in `C:\Zimmermann\` entpacken und den Ordner `node-vX-win-x64` in `node` umbenennen. `PATH` ändert sich nicht. Prüfen mit `node -v`
+2. **pnpm:** `$env:PNPM_VERSION = 'next-12'` und `Invoke-WebRequest https://get.pnpm.io/install.ps1 -UseBasicParsing | Invoke-Expression`, danach in einem neuen Terminal `pnpm -v`. Das Skript wird im Hochschulnetz blockiert
+3. **Projekt:** `node_modules` und `pnpm-lock.yaml` löschen, `pnpm i`, danach `pnpm run fmt:check`, `pnpm run lint`, `pnpm run tsc` und `pnpm audit`. Bei exakt gesetzten Versionen (`saveExact: true`) bleiben die direkten Abhängigkeiten gleich, nur die Unterabhängigkeiten werden neu aufgelöst
 
 ## Starten und Beenden
 
@@ -448,6 +456,7 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Wird PostgreSQL beendet oder neu gestartet, meldet der Pool von `pg` das als `error`-Event der inaktiven Verbindungen (`terminating connection due to administrator command`). **Ohne Handler beendet Node.js dann den ganzen Appserver.** Das fiel am 11.11. beim Test der Readiness auf. Seitdem steht in `db.mts` `db.$client.on('error', logPoolError)`: Der Fehler wird geloggt, der Server läuft weiter, und die nächste Anfrage baut eine neue Verbindung auf
 - Bruno kennt die Assertion `isTrue` nicht. Für Booleans `eq true` und `eq false` verwenden
 - `expires_in` im Token ist nicht immer 1800: Keycloak rechnet die Restlaufzeit auf die Sekunde, und Bruno bekam am 11.11. einmal 1799. Assertions und Tests deshalb mit einem Bereich prüfen (`gte 1790` und `lte 1800`, bei `refresh_expires_in` entsprechend um 3600)
+- `pnpm audit` meldet am 11.11. eine moderate Schwachstelle (`GHSA-g3hv-75wg-m249`, `minimatch` in `@stylistic/eslint-plugin > eslint`). Sie betrifft nur ein Entwicklungswerkzeug, ausnutzbar ist sie nur mit von außen bestimmten Glob-Mustern, und einen Fix gibt es erst mit `minimatch` 11 (`eslint` 10.14 nutzt noch Version 10). Wie beim Dozenten (`GHSA-ggr8-5vv4-36mx`) steht sie in `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`. Beim nächsten Update von `eslint` oder `@stylistic/eslint-plugin` prüfen, ob der Eintrag noch nötig ist
 
 ## Offen
 
@@ -462,6 +471,7 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - [x] Keycloak mit `jose`: Token-Route, Rollen für REST, GraphQL und `/dev/db_populate`, Bruno mit OAuth 2 (11.11., Bruno 55/55)
 - [x] GraphQL `update` und `delete` mit Rollen (11.11., Bruno 62/62)
 - [x] Health (liveness, readiness), Prometheus-Metriken und Fehler-Handler im DB-Pool (11.11., Bruno 65/65)
+- [x] Node 26.13.1, pnpm 12.20.0, Lockfile v13 und `pnpm audit` (11.11.)
 - [ ] Pull Requests von Sai prüfen und mergen, Code-Review und Abgabe
 - [ ] Zeiterfassung (Enes, am Ende jeder Arbeitssession) und Projektplan (Sai und Enes) in Excel pflegen
 
@@ -473,11 +483,11 @@ Der Code für REST, GraphQL, Keycloak, Health und Prometheus steht. Alles Übrig
 - [ ] GitHub Actions: ergänzen um Vitest (brauchen PostgreSQL, Keycloak und den Appserver)
 - [ ] Docker-Image (Dockerfile) und Docker Compose, dabei auch Compose-Ordner für Mailpit, Keycloak und Prometheus mit Grafana ins Repository (Vorlagen in `extras/compose` der `hono.zip`)
 - [ ] Lasttests mit Grafana k6
-- [ ] OWASP Dependency Check, `pnpm audit`, SonarQube
+- [ ] OWASP Dependency Check und SonarQube (`pnpm audit` ist erledigt, siehe Beobachtungen)
 - [ ] PlantUML-Diagramme und Dokumentation (AsciiDoctor)
 - [ ] Refresh-Token-Route (beim Dozenten in `auth-router`)
 - [ ] GraphiQL nur in der Entwicklung einschalten (`graphiql: true` in `graphql.router.mts`)
 - [ ] `.env.example` ohne Secrets ins Repository
 - [ ] Regeln in `oxlint.config.mts` ergänzen: `no-var`, `prefer-const`, `@stylistic/quotes` (single), `prefer-destructuring`. Mit `pnpm exec oxlint --rules` prüfen, ob es eine Regel gegen Enums gibt
-- [ ] Node auf mindestens 26.13 aktualisieren, Docker-Images für Node 26.13 und Bun 1.4.4 klären
+- [ ] Docker-Images für Node 26.13 und Bun 1.4.4 klären (Node und pnpm sind lokal aktualisiert)
 - [ ] Zertifikat läuft am 07.02.2027 ab, vor der Abgabe prüfen
