@@ -149,7 +149,7 @@ Seit dem 11.11. verlangt das Projekt Node `^26.13.0` und pnpm `^12.19.0` (`devEn
 
 1. **Node** (ZIP, kein Installer): Alle Terminals und VS Code schließen. Das ZIP `node-vX-win-x64.zip` von `https://nodejs.org/dist/vX/` laden und den SHA-256-Wert mit `SHASUMS256.txt` aus demselben Ordner vergleichen (`Get-FileHash`). Den Ordner `C:\Zimmermann\node` umbenennen (Sicherung), das ZIP in `C:\Zimmermann\` entpacken und den Ordner `node-vX-win-x64` in `node` umbenennen. `PATH` ändert sich nicht. Prüfen mit `node -v`
 2. **pnpm:** `$env:PNPM_VERSION = 'next-12'` und `Invoke-WebRequest https://get.pnpm.io/install.ps1 -UseBasicParsing | Invoke-Expression`, danach in einem neuen Terminal `pnpm -v`. Das Skript wird im Hochschulnetz blockiert
-3. **Projekt:** `node_modules` und `pnpm-lock.yaml` löschen, `pnpm i`, danach `pnpm run fmt:check`, `pnpm run lint`, `pnpm run tsc` und `pnpm audit`. Bei exakt gesetzten Versionen (`saveExact: true`) bleiben die direkten Abhängigkeiten gleich, nur die Unterabhängigkeiten werden neu aufgelöst
+3. **Projekt:** in `package.json` **beide** pnpm-Angaben auf `^12.19.0` setzen (`devEngines.packageManager.version` und `engines.pnpm`), `node_modules` und `pnpm-lock.yaml` löschen, `pnpm i`, danach `pnpm run fmt:check`, `pnpm run lint`, `pnpm run tsc` und `pnpm audit`. Bei exakt gesetzten Versionen (`saveExact: true`) bleiben die direkten Abhängigkeiten gleich, nur die Unterabhängigkeiten werden neu aufgelöst
 
 ## Starten und Beenden
 
@@ -457,6 +457,7 @@ Die CSV-Dateien in `extras/compose/postgres/init/rezept/csv` legen 9 Rezepte (ID
 - Bruno kennt die Assertion `isTrue` nicht. Für Booleans `eq true` und `eq false` verwenden
 - `expires_in` im Token ist nicht immer 1800: Keycloak rechnet die Restlaufzeit auf die Sekunde, und Bruno bekam am 11.11. einmal 1799. Assertions und Tests deshalb mit einem Bereich prüfen (`gte 1790` und `lte 1800`, bei `refresh_expires_in` entsprechend um 3600)
 - `pnpm audit` meldet am 11.11. eine moderate Schwachstelle (`GHSA-g3hv-75wg-m249`, `minimatch` in `@stylistic/eslint-plugin > eslint`). Sie betrifft nur ein Entwicklungswerkzeug, ausnutzbar ist sie nur mit von außen bestimmten Glob-Mustern, und einen Fix gibt es erst mit `minimatch` 11 (`eslint` 10.14 nutzt noch Version 10). Wie beim Dozenten (`GHSA-ggr8-5vv4-36mx`) steht sie in `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`. Beim nächsten Update von `eslint` oder `@stylistic/eslint-plugin` prüfen, ob der Eintrag noch nötig ist
+- CI und pnpm-Version: Die GitHub-Action `pnpm/action-setup` installiert die Version aus `devEngines.packageManager.version` der `package.json`. Am 12.11. stand dort noch `^12.18.0`, die CI nutzte deshalb pnpm 12.18.0 und brach bei `lockfile: format: v13` in `pnpm-workspace.yaml` mit `ERR_PNPM_INVALID_SETTING ... LockfileSetting` ab (die Einstellung kennt erst pnpm 12.19). Der Fehler zeigte sich im Schritt "Node.js installieren", der als Erster `pnpm` aufruft (`cache: pnpm`). Lokal fiel es nicht auf, weil dort pnpm 12.20 läuft. Bei jeder Einstellung in `pnpm-workspace.yaml`, die nur neuere pnpm-Versionen kennen, also die Mindestversion in der `package.json` mit anheben
 
 ## Offen
 
