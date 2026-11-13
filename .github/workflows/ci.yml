@@ -27,7 +27,17 @@ jobs:
 
       # pnpm-Version aus devEngines.packageManager in package.json
       - name: pnpm installieren
+        id: pnpm
         uses: pnpm/action-setup@v6.1.1
+
+      # Die Action legt zuerst ein aelteres Start-pnpm und danach die gewuenschte Version in den PATH.
+      # Damit sicher die gewuenschte Version gefunden wird (sonst scheitert pnpm-workspace.yaml mit
+      # "lockfile: format: v13" an einer aelteren pnpm-Version), kommt ihr Ordner nochmals nach vorn
+      - name: pnpm an den Anfang des PATH setzen
+        run: echo "${{ steps.pnpm.outputs.bin_dest }}" >> "$GITHUB_PATH"
+
+      - name: pnpm-Version anzeigen
+        run: pnpm --version
 
       # Node-Version aus devEngines.runtime in package.json, pnpm-Store wird zwischengespeichert
       - name: Node.js installieren
